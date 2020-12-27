@@ -1,2 +1,3 @@
 # zsh-ssh
-Better completion for for ssh in Zsh.
+
+Better completion for ssh in Zsh.
