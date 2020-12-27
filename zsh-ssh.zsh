@@ -137,7 +137,10 @@ _fzf-complete-ssh() {
 
     if [ -n "$result" ]; then
       selected_host=$(cut -f 1 -d " " <<< ${result})
-      LBUFFER="${LBUFFER}${selected_host}"
+
+      connect_cmd="ssh ${selected_host}"
+      LBUFFER="$connect_cmd"
+
       zle accept-line
     fi
 
