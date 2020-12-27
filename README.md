@@ -2,7 +2,7 @@
 
 Better completion for ssh in Zsh.
 
-[![asciicast](https://asciinema.org/a/381400.svg)](https://asciinema.org/a/381400)
+[![asciicast](https://asciinema.org/a/381405.svg)](https://asciinema.org/a/381405)
 
 ## Installation
 
