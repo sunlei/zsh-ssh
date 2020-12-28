@@ -10,6 +10,8 @@ Better completion for ssh in Zsh.
         - [Antigen](#antigen)
         - [Oh My Zsh](#oh-my-zsh)
         - [Manual (Git Clone)](#manual-git-clone)
+    - [Usage](#usage)
+        - [SSH Config Example](#ssh-config-example)
 
 ## Installation
 
@@ -58,3 +60,24 @@ antigen bundle sunlei/zsh-ssh
     ```
 
 3. Start a new terminal session.
+
+## Usage
+
+Just press <kbd>Tab</kbd> after `ssh` command as usual.
+
+### SSH Config Example
+
+You can use `#_Desc` to set description.
+
+~/.ssh/config
+
+```text
+Host Bastion-Host
+    Hostname 1.1.1.1
+    User sunlei
+
+Host Development-Host
+    Hostname 2.2.2.2
+    IdentityFile ~/.ssh/development-host
+    #_Desc For Development
+```
