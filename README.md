@@ -4,6 +4,13 @@ Better completion for ssh in Zsh.
 
 [![asciicast](https://asciinema.org/a/381405.svg)](https://asciinema.org/a/381405)
 
+- [zsh-ssh](#zsh-ssh)
+    - [Installation](#installation)
+        - [Zinit](#zinit)
+        - [Antigen](#antigen)
+        - [Oh My Zsh](#oh-my-zsh)
+        - [Manual (Git Clone)](#manual-git-clone)
+
 ## Installation
 
 Make sure you have [fzf](https://github.com/junegunn/fzf) installed.
