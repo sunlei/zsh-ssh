@@ -122,7 +122,7 @@ Alias|->|Hostname|Desc
   LBUFFER="$connect_cmd"
 }
 
-_fzf-complete-ssh() {
+fzf-complete-ssh() {
   local tokens cmd result selected_host
   setopt localoptions noshwordsplit noksh_arrays noposixbuiltins
 
@@ -177,5 +177,5 @@ _fzf-complete-ssh() {
 }
 
 
-zle -N _fzf-complete-ssh
-bindkey '^I' _fzf-complete-ssh
+zle -N fzf-complete-ssh
+bindkey '^I' fzf-complete-ssh
