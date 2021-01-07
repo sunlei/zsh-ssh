@@ -107,6 +107,20 @@ Alias|->|Hostname|Desc
   echo $host_list | command column -t -s '|'
 }
 
+-set-lbuffer() {
+  local result selected_host connect_cmd is_fzf_result
+  result="$1"
+  is_fzf_result="$2"
+
+  if [ "$is_fzf_result" = false ] ; then
+    result=$(cut -f 1 -d "|" <<< ${result})
+  fi
+
+  selected_host=$(cut -f 1 -d " " <<< ${result})
+  connect_cmd="ssh ${selected_host}"
+
+  LBUFFER="$connect_cmd"
+}
 
 _fzf-complete-ssh() {
   local tokens cmd result selected_host
@@ -125,6 +139,11 @@ _fzf-complete-ssh() {
       return
     fi
 
+    if [ $(echo $result | wc -l) -eq 1 ]; then
+      -set-lbuffer $result false
+      return
+    fi
+
     result=$(-fzf-list-generator $result | fzf \
       --height 40% \
       --ansi \
@@ -137,11 +156,7 @@ _fzf-complete-ssh() {
     )
 
     if [ -n "$result" ]; then
-      selected_host=$(cut -f 1 -d " " <<< ${result})
-
-      connect_cmd="ssh ${selected_host}"
-      LBUFFER="$connect_cmd"
-
+      -set-lbuffer $result true
       zle accept-line
     fi
 
