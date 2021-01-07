@@ -141,6 +141,7 @@ _fzf-complete-ssh() {
 
     if [ $(echo $result | wc -l) -eq 1 ]; then
       -set-lbuffer $result false
+      zle reset-prompt
       return
     fi
 
