@@ -1,6 +1,6 @@
 # zsh-ssh
 
-Better completion for ssh in Zsh.
+Better host completion for ssh in Zsh.
 
 [![asciicast](https://asciinema.org/a/381405.svg)](https://asciinema.org/a/381405)
 
