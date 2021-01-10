@@ -148,6 +148,9 @@ fzf-complete-ssh() {
     result=$(-fzf-list-generator $result | fzf \
       --height 40% \
       --ansi \
+      --border \
+      --cycle
+      --info=inline
       --header-lines=2 \
       --reverse \
       --prompt='SSH Remote > ' \
