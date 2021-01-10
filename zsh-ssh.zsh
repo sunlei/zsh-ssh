@@ -149,8 +149,8 @@ fzf-complete-ssh() {
       --height 40% \
       --ansi \
       --border \
-      --cycle
-      --info=inline
+      --cycle \
+      --info=inline \
       --header-lines=2 \
       --reverse \
       --prompt='SSH Remote > ' \
