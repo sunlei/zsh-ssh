@@ -2,11 +2,11 @@
 
 # Better completion for ssh in Zsh.
 # https://github.com/sunlei/zsh-ssh
-# v0.0.1
+# v0.0.2
 # Copyright (c) 2020 Sunlei <guizaicn@gmail.com>
 
 
--ssh-host-list() {
+_ssh-host-list() {
   local ssh_config host_list
   ssh_config=$(command grep -v -E "^\s*#[^_]" $HOME/.ssh/config)
 
@@ -88,13 +88,13 @@
 }
 
 
--fzf-list-generator() {
+_fzf-list-generator() {
   local header host_list
 
   if [ -n "$1" ]; then
     host_list="$1"
   else
-    host_list=$(-ssh-host-list)
+    host_list=$(_ssh-host-list)
   fi
 
   header="
@@ -107,7 +107,7 @@ Alias|->|Hostname|Desc
   echo $host_list | command column -t -s '|'
 }
 
--set-lbuffer() {
+_set-lbuffer() {
   local result selected_host connect_cmd is_fzf_result
   result="$1"
   is_fzf_result="$2"
@@ -132,7 +132,7 @@ fzf-complete-ssh() {
   if [[ "$LBUFFER" =~ "^ *ssh$" ]]; then
     zle ${fzf_ssh_default_completion:-expand-or-complete}
   elif [[ "$cmd" == "ssh" ]]; then
-    result=$(-ssh-host-list ${tokens[2, -1]})
+    result=$(_ssh-host-list ${tokens[2, -1]})
 
     if [ -z "$result" ]; then
       zle ${fzf_ssh_default_completion:-expand-or-complete}
@@ -140,12 +140,13 @@ fzf-complete-ssh() {
     fi
 
     if [ $(echo $result | wc -l) -eq 1 ]; then
-      -set-lbuffer $result false
+      _set-lbuffer $result false
       zle reset-prompt
+      # zle redisplay
       return
     fi
 
-    result=$(-fzf-list-generator $result | fzf \
+    result=$(_fzf-list-generator $result | fzf \
       --height 40% \
       --ansi \
       --border \
@@ -160,11 +161,12 @@ fzf-complete-ssh() {
     )
 
     if [ -n "$result" ]; then
-      -set-lbuffer $result true
+      _set-lbuffer $result true
       zle accept-line
     fi
 
     zle reset-prompt
+    # zle redisplay
 
   # Fall back to default completion
   else
