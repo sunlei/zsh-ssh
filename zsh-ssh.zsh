@@ -117,7 +117,7 @@ _set-lbuffer() {
   fi
 
   selected_host=$(cut -f 1 -d " " <<< ${result})
-  connect_cmd="ssh ${selected_host}"
+  connect_cmd="${tokens[1]} ${selected_host}"
 
   LBUFFER="$connect_cmd"
 }
@@ -131,7 +131,7 @@ fzf-complete-ssh() {
 
   if [[ "$LBUFFER" =~ "^ *ssh$" ]]; then
     zle ${fzf_ssh_default_completion:-expand-or-complete}
-  elif [[ "$cmd" == "ssh" ]]; then
+  elif [[ "$cmd" =~ "ssh|sftp" ]]; then
     result=$(_ssh-host-list ${tokens[2, -1]})
 
     if [ -z "$result" ]; then
