@@ -129,9 +129,11 @@ fzf-complete-ssh() {
   tokens=(${(z)LBUFFER})
   cmd=${tokens[1]}
 
+  echo ${token[1]}
+
   if [[ "$LBUFFER" =~ "^ *ssh$" ]]; then
     zle ${fzf_ssh_default_completion:-expand-or-complete}
-  elif [[ "$cmd" =~ "ssh|sftp" ]]; then
+  elif [[ "$cmd" =~ "^ssh$|^sftp$" ]]; then
     result=$(_ssh-host-list ${tokens[2, -1]})
 
     if [ -z "$result" ]; then
