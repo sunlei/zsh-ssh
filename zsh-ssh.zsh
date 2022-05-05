@@ -5,10 +5,30 @@
 # v0.0.2
 # Copyright (c) 2020 Sunlei <guizaicn@gmail.com>
 
-
 _ssh-host-list() {
   local ssh_config host_list
-  ssh_config=$(command grep -v -E "^\s*#[^_]" $HOME/.ssh/config)
+
+  pushd "$HOME/.ssh" >/dev/null
+
+  ssh_config=$(command awk '
+    {
+      if (NF == 2 && tolower($1) == "include")
+        {
+          cmd = "sed -s '\''$G'\'' " $2 " 2> /dev/null"
+          # print cmd
+          while ( (cmd | getline line) > 0 ) {
+            print line
+          }
+          close($2)
+        }
+      else {
+        print
+      }
+    }
+  ' config)
+  ssh_config=$(echo $ssh_config | command grep -v -E "^\s*#[^_]")
+
+  popd >/dev/null
 
   host_list=$(echo $ssh_config | command awk '
     function join(array, start, end, sep, result, i)
