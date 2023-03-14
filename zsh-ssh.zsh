@@ -8,8 +8,6 @@
 _ssh-host-list() {
   local ssh_config host_list
 
-  pushd "$HOME/.ssh" >/dev/null
-
   ssh_config=$(command awk '
     {
       if (NF == 2 && tolower($1) == "include")
@@ -25,10 +23,8 @@ _ssh-host-list() {
         print
       }
     }
-  ' config)
+  ' $HOME/.ssh/config)
   ssh_config=$(echo $ssh_config | command grep -v -E "^\s*#[^_]")
-
-  popd >/dev/null
 
   host_list=$(echo $ssh_config | command awk '
     function join(array, start, end, sep, result, i)
@@ -98,10 +94,14 @@ _ssh-host-list() {
     }
   ')
 
-  if [ -n "$1" ]; then
-    host_list=$(command grep -i "$1" <<< "$host_list")
-  fi
+  for arg in "$@"; do
+    case $arg in
+    -*) shift;;
+    *) break;;
+    esac
+  done
 
+  host_list=$(command grep -i "$1" <<< "$host_list")
   host_list=$(echo $host_list | command sort -u)
 
   echo $host_list
