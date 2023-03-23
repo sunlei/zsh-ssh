@@ -84,7 +84,7 @@ _ssh-host-list() {
         desc_formated = sprintf("[\033[00;34m%s\033[0m]", desc)
       }
 
-      if ((host_name && host_name !~ "*") || (alias && alias !~ "*")) {
+      if ((host_name && host_name != "*") || (alias && alias != "*")) {
         host = sprintf("%s|->|%s|%s\n", alias, host_name, desc_formated)
         host_list = host_list host
       }
