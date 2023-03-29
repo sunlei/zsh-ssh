@@ -2,22 +2,31 @@
 
 # Better completion for ssh in Zsh.
 # https://github.com/sunlei/zsh-ssh
-# v0.0.2
+# v0.0.3
 # Copyright (c) 2020 Sunlei <guizaicn@gmail.com>
 
 _ssh-host-list() {
   local ssh_config host_list
 
-  ssh_config=$(command awk '
+  ssh_config=$(command awk -v HOME="$HOME" '
+    function resolve_path(path) {
+      if (substr(path, 1, 1) == "~") {
+        path = HOME substr(path, 2)
+      }
+      else if (substr(path, 1, 1) != "/") {
+        path = HOME "/.ssh/" path
+      }
+      return path
+    }
     {
       if (NF == 2 && tolower($1) == "include")
         {
-          cmd = "sed -s '\''$G'\'' " $2 " 2> /dev/null"
-          # print cmd
+          file = resolve_path($2)
+          cmd = "sed -s '\''$G'\'' " file " 2> /dev/null"
           while ( (cmd | getline line) > 0 ) {
             print line
           }
-          close($2)
+          close(file)
         }
       else {
         print
