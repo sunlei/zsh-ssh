@@ -19,16 +19,14 @@ _ssh-host-list() {
       return path
     }
     {
-      if (NF == 2 && tolower($1) == "include")
-        {
-          file = resolve_path($2)
-          cmd = "sed -s '\''$G'\'' " file " 2> /dev/null"
-          while ( (cmd | getline line) > 0 ) {
-            print line
-          }
-          close(file)
+      if (NF == 2 && tolower($1) == "include") {
+        file = resolve_path($2)
+        cmd = "sed -s '\''$G'\'' " file " 2> /dev/null"
+        while ( (cmd | getline line) > 0 ) {
+          print line
         }
-      else {
+        close(file)
+      } else {
         print
       }
     }
@@ -36,21 +34,19 @@ _ssh-host-list() {
   ssh_config=$(echo $ssh_config | command grep -v -E "^\s*#[^_]")
 
   host_list=$(echo $ssh_config | command awk '
-    function join(array, start, end, sep, result, i)
-    {
+    function join(array, start, end, sep, result, i) {
       # https://www.gnu.org/software/gawk/manual/html_node/Join-Function.html
       if (sep == "")
-      sep = " "
+        sep = " "
       else if (sep == SUBSEP) # magic value
-      sep = ""
+        sep = ""
       result = array[start]
       for (i = start + 1; i <= end; i++)
         result = result sep array[i]
       return result
     }
 
-    function parse_line(line)
-    {
+    function parse_line(line) {
       n = split(line, line_array, " ")
 
       key = line_array[1]
