@@ -55,6 +55,17 @@ _ssh-host-list() {
       return key "#-#" value
     }
 
+    function contains_star(str) {
+        return index(str, "*") > 0
+    }
+
+    function starts_or_ends_with_star(str) {
+        start_char = substr(str, 1, 1)
+        end_char = substr(str, length(str), 1)
+
+        return start_char == "*" || end_char == "*"
+    }
+
     BEGIN {
       IGNORECASE = 1
       FS="\n"
@@ -89,7 +100,7 @@ _ssh-host-list() {
         desc_formated = sprintf("[\033[00;34m%s\033[0m]", desc)
       }
 
-      if ((host_name && host_name != "*") || (alias && alias != "*")) {
+      if ((host_name && !starts_or_ends_with_star(host_name)) && (alias && !starts_or_ends_with_star(alias))) {
         host = sprintf("%s|->|%s|%s\n", alias, host_name, desc_formated)
         host_list = host_list host
       }
