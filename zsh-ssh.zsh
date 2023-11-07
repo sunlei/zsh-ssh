@@ -193,6 +193,8 @@ fzf-complete-ssh() {
       --prompt='SSH Remote > ' \
       --no-separator \
       --bind 'shift-tab:up,tab:down,bspace:backward-delete-char/eof' \
+	  --bind 'ctrl-y:execute-silent(echo -n {1} | xclip -selection clipboard)+abort' \
+	  --bind 'ctrl-h:execute-silent(ssh -T -G {1} | grep -i -E "^HostName" | cut -f2 -d " "| xclip -selection clipboard)+abort' \
       --preview 'ssh -T -G $(cut -f 1 -d " " <<< {}) | grep -i -E "^User |^HostName |^Port |^ControlMaster |^ForwardAgent |^LocalForward |^IdentityFile |^RemoteForward |^ProxyCommand |^ProxyJump " | column -t' \
       --preview-window=right:40%
     )
