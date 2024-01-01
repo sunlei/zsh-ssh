@@ -18,17 +18,23 @@ _ssh-host-list() {
       }
       return path
     }
-    {
-      if (NF == 2 && tolower($1) == "include") {
-        file = resolve_path($2)
-        cmd = "sed -s '\''$G'\'' " file " 2> /dev/null"
-        while ( (cmd | getline line) > 0 ) {
+
+    function read_config(file) {
+      while ((getline line < file) > 0) {
+        if (line ~ /^Include /) {
+          split(line, parts, " ")
+          included_file = resolve_path(parts[2])
+          read_config(included_file)  # Recursive call
+        } else {
           print line
         }
-        close(file)
-      } else {
-        print
       }
+      close(file)
+    }
+
+    BEGIN {
+      # Start the recursive reading process with the main SSH config file
+      read_config(resolve_path(ARGV[1]))
     }
   ' $HOME/.ssh/config)
   ssh_config=$(echo $ssh_config | command grep -v -E "^\s*#[^_]")
