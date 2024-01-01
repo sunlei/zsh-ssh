@@ -19,12 +19,27 @@ _ssh-host-list() {
       return path
     }
 
+    function expand_path(path) {
+      # Use the shell to expand any wildcards and read the list of files
+      cmd = "for file in " path "; do echo $file; done"
+      while ((cmd | getline expanded) > 0) {
+        if (expanded) {
+          read_config(expanded)
+        }
+      }
+      close(cmd)
+    }
+
     function read_config(file) {
       while ((getline line < file) > 0) {
         if (line ~ /^Include /) {
           split(line, parts, " ")
-          included_file = resolve_path(parts[2])
-          read_config(included_file)  # Recursive call
+          include_path = resolve_path(parts[2])
+          if (index(include_path, "*") > 0) {
+            expand_path(include_path)  # Handle wildcard expansion
+          } else {
+            read_config(include_path)  # Recursive call for specific file
+          }
         } else {
           print line
         }
