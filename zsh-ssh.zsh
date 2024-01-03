@@ -18,8 +18,8 @@ _parse_config_file() {
       local include_path="${match[1]}"
       # Replace the first occurrence of "~" in the string with the value of the environment variable HOME.
       local expanded_include_path=${include_path/#\~/$HOME}
-      # or $~expanded_include_path
-      for include_file_path in $expanded_include_path; do
+      # `~` used to force the expansion of wildcards in variables
+      for include_file_path in $~expanded_include_path; do
         if [[ -f "$include_file_path" ]]; then
           _parse_config_file "$include_file_path"
         fi
