@@ -92,22 +92,22 @@ _ssh-host-list() {
         if (key == "#_Desc") { desc = value }
       }
 
-	  split(aliases, alias_list, " ")
-	  for( i in  alias_list)	{
-		  alias = alias_list[i]
+      split(aliases, alias_list, " ")
+      for( i in  alias_list)    {
+          alias = alias_list[i]
 
-		  if (!host_name && alias ) {
-			  host_name = alias
-		  }
+          if (!host_name && alias ) {
+              host_name = alias
+          }
 
-		  if (desc) {
-			  desc_formated = sprintf("[\033[00;34m%s\033[0m]", desc)
-		  }
+          if (desc) {
+              desc_formated = sprintf("[\033[00;34m%s\033[0m]", desc)
+          }
 
                   if ((host_name && !starts_or_ends_with_star(host_name)) && (alias && !starts_or_ends_with_star(alias))) {
-			  host = sprintf("%s|->|%s|%s\n", alias, host_name, desc_formated)
-			  host_list = host_list host
-		  }
+              host = sprintf("%s|->|%s|%s\n", alias, host_name, desc_formated)
+              host_list = host_list host
+          }
 
       }
     }
