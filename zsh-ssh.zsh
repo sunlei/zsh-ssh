@@ -9,25 +9,25 @@ SSH_CONFIG_FILE="${SSH_CONFIG_FILE:-$HOME/.ssh/config}"
 
 # Parse the file and handle the include directive.
 _parse_config_file() {
-    # Enable PCRE matching
-    setopt localoptions rematchpcre
+  # Enable PCRE matching
+  setopt localoptions rematchpcre
 
-    local config_file_path=$(realpath "$1")
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        if [[ $line =~ ^[Ii]nclude[[:space:]]+(.*) ]] && (( $#match > 0 )); then
-            local include_path="${match[1]}"
-            # Replace the first occurrence of "~" in the string with the value of the environment variable HOME.
-            local expanded_include_path=${include_path/#\~/$HOME}
-            # or $~expanded_include_path
-            for include_file_path in $expanded_include_path; do
-                if [[ -f "$include_file_path" ]]; then
-                    _parse_config_file "$include_file_path"
-                fi
-            done
-        else
-            echo "$line"
+  local config_file_path=$(realpath "$1")
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ $line =~ ^[Ii]nclude[[:space:]]+(.*) ]] && (( $#match > 0 )); then
+      local include_path="${match[1]}"
+      # Replace the first occurrence of "~" in the string with the value of the environment variable HOME.
+      local expanded_include_path=${include_path/#\~/$HOME}
+      # or $~expanded_include_path
+      for include_file_path in $expanded_include_path; do
+        if [[ -f "$include_file_path" ]]; then
+          _parse_config_file "$include_file_path"
         fi
-    done < "$config_file_path"
+      done
+    else
+      echo "$line"
+    fi
+  done < "$config_file_path"
 }
 
 _ssh-host-list() {
@@ -96,22 +96,21 @@ _ssh-host-list() {
       }
 
       split(aliases, alias_list, " ")
-      for( i in  alias_list)    {
-          alias = alias_list[i]
+      for (i in alias_list) {
+        alias = alias_list[i]
 
-          if (!host_name && alias ) {
-              host_name = alias
-          }
+        if (!host_name && alias ) {
+          host_name = alias
+        }
 
-          if (desc) {
-              desc_formated = sprintf("[\033[00;34m%s\033[0m]", desc)
-          }
+        if (desc) {
+          desc_formated = sprintf("[\033[00;34m%s\033[0m]", desc)
+        }
 
-                  if ((host_name && !starts_or_ends_with_star(host_name)) && (alias && !starts_or_ends_with_star(alias))) {
-              host = sprintf("%s|->|%s|%s\n", alias, host_name, desc_formated)
-              host_list = host_list host
-          }
-
+        if ((host_name && !starts_or_ends_with_star(host_name)) && (alias && !starts_or_ends_with_star(alias))) {
+          host = sprintf("%s|->|%s|%s\n", alias, host_name, desc_formated)
+          host_list = host_list host
+        }
       }
     }
     END {
@@ -230,3 +229,5 @@ fzf-complete-ssh() {
 
 zle -N fzf-complete-ssh
 bindkey '^I' fzf-complete-ssh
+
+# vim: set ft=zsh sw=2 ts=2 et
