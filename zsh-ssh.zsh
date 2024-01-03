@@ -5,6 +5,8 @@
 # v0.0.4
 # Copyright (c) 2020 Sunlei <guizaicn@gmail.com>
 
+SSH_CONFIG_FILE="${SSH_CONFIG_FILE:-$HOME/.ssh/config}"
+
 # Parse the file and handle the include directive.
 _parse_config_file() {
     # Enable PCRE matching
@@ -31,7 +33,7 @@ _parse_config_file() {
 _ssh-host-list() {
   local ssh_config host_list
 
-  ssh_config=$(_parse_config_file $HOME/.ssh/config)
+  ssh_config=$(_parse_config_file $SSH_CONFIG_FILE)
   ssh_config=$(echo $ssh_config | command grep -v -E "^\s*#[^_]")
 
   host_list=$(echo $ssh_config | command awk '
