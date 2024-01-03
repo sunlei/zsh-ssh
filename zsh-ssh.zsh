@@ -21,6 +21,8 @@ _parse_config_file() {
       # `~` used to force the expansion of wildcards in variables
       for include_file_path in $~expanded_include_path; do
         if [[ -f "$include_file_path" ]]; then
+          # Insert a blank line between the included files
+          echo ""
           _parse_config_file "$include_file_path"
         fi
       done
