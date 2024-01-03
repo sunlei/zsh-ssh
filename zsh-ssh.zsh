@@ -2,7 +2,7 @@
 
 # Better completion for ssh in Zsh.
 # https://github.com/sunlei/zsh-ssh
-# v0.0.4
+# v0.0.5
 # Copyright (c) 2020 Sunlei <guizaicn@gmail.com>
 
 SSH_CONFIG_FILE="${SSH_CONFIG_FILE:-$HOME/.ssh/config}"
