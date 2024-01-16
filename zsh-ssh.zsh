@@ -37,6 +37,8 @@ _ssh-host-list() {
 
   ssh_config=$(_parse_config_file $SSH_CONFIG_FILE)
   ssh_config=$(echo $ssh_config | command grep -v -E "^\s*#[^_]")
+  # Make sure each Host line is preceded by an empty line
+  ssh_config=$(echo $ssh_config | command sed 's/[[:space:]]*Host\b/\nHost /g')
 
   host_list=$(echo $ssh_config | command awk '
     function join(array, start, end, sep, result, i) {
@@ -52,10 +54,12 @@ _ssh-host-list() {
     }
 
     function parse_line(line) {
-      n = split(line, line_array, " ")
+      # Manualy remove leading spaces for split with regex
+      line = gensub(/^\s+/, "", "g", line)
+      n = split(line, line_array, " +|=")
 
       key = line_array[1]
-      value = join(line_array, 2, n)
+      value = join(line_array, 2, n, " ")
 
       return key "#-#" value
     }
