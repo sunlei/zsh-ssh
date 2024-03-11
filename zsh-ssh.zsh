@@ -11,6 +11,7 @@ SSH_CONFIG_FILE="${SSH_CONFIG_FILE:-$HOME/.ssh/config}"
 _parse_config_file() {
   # Enable PCRE matching
   setopt localoptions rematchpcre
+  unsetopt nomatch
 
   local config_file_path=$(realpath "$1")
   while IFS= read -r line || [[ -n "$line" ]]; do
