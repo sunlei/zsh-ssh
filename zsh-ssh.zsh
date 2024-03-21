@@ -17,8 +17,12 @@ _parse_config_file() {
   while IFS= read -r line || [[ -n "$line" ]]; do
     if [[ $line =~ ^[Ii]nclude[[:space:]]+(.*) ]] && (( $#match > 0 )); then
       local include_path="${match[1]}"
-      # Replace the first occurrence of "~" in the string with the value of the environment variable HOME.
-      local expanded_include_path=${include_path/#\~/$HOME}
+      if [[ $include_path == ~* ]]; then
+        # Replace the first occurrence of "~" in the string with the value of the environment variable HOME.
+        local expanded_include_path=${include_path/#\~/$HOME}
+      else
+        local expanded_include_path="$HOME/.ssh/$include_path"
+      fi
       # `~` used to force the expansion of wildcards in variables
       for include_file_path in $~expanded_include_path; do
         if [[ -f "$include_file_path" ]]; then
