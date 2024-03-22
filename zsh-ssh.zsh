@@ -88,18 +88,20 @@ _ssh-host-list() {
       alias = ""
       desc = ""
       desc_formated = ""
+      user = ""
 
       for (line_num = 1; line_num <= NF; ++line_num) {
         line = parse_line($line_num)
 
         split(line, tmp, "#-#")
 
-        key = tmp[1]
+        key = tolower(tmp[1])
         value = tmp[2]
 
-        if (key == "Host") { aliases = value }
-        if (key == "Hostname") { host_name = value }
+        if (key == "host") { aliases = value }
+        if (key == "hostname") { host_name = value }
         if (key == "#_Desc") { desc = value }
+        if (key == "user") { user = value }
       }
 
       split(aliases, alias_list, " ")
@@ -115,6 +117,9 @@ _ssh-host-list() {
         }
 
         if ((host_name && !starts_or_ends_with_star(host_name)) && (alias && !starts_or_ends_with_star(alias))) {
+          if (user) {
+            host_name = sprintf("%s@%s", user, host_name)
+          }
           host = sprintf("%s|->|%s|%s\n", alias, host_name, desc_formated)
           host_list = host_list host
         }
