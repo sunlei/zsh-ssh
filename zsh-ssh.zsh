@@ -37,7 +37,7 @@ _parse_config_file() {
   done < "$config_file_path"
 }
 
-_ssh-host-list() {
+_ssh_host_list() {
   local ssh_config host_list
 
   ssh_config=$(_parse_config_file $SSH_CONFIG_FILE)
@@ -139,13 +139,13 @@ _ssh-host-list() {
 }
 
 
-_fzf-list-generator() {
+_fzf_list_generator() {
   local header host_list
 
   if [ -n "$1" ]; then
     host_list="$1"
   else
-    host_list=$(_ssh-host-list)
+    host_list=$(_ssh_host_list)
   fi
 
   header="
@@ -173,7 +173,7 @@ _set-lbuffer() {
   LBUFFER="$connect_cmd"
 }
 
-fzf-complete-ssh() {
+fzf_complete_ssh() {
   local tokens cmd result selected_host
   setopt localoptions noshwordsplit noksh_arrays noposixbuiltins
 
@@ -183,7 +183,7 @@ fzf-complete-ssh() {
   if [[ "$LBUFFER" =~ "^ *ssh$" ]]; then
     zle ${fzf_ssh_default_completion:-expand-or-complete}
   elif [[ "$cmd" == "ssh" ]]; then
-    result=$(_ssh-host-list ${tokens[2, -1]})
+    result=$(_ssh_host_list ${tokens[2, -1]})
 
     if [ -z "$result" ]; then
       zle ${fzf_ssh_default_completion:-expand-or-complete}
@@ -197,7 +197,7 @@ fzf-complete-ssh() {
       return
     fi
 
-    result=$(_fzf-list-generator $result | fzf \
+    result=$(_fzf_list_generator $result | fzf \
       --height 40% \
       --ansi \
       --border \
@@ -234,7 +234,7 @@ fzf-complete-ssh() {
 }
 
 
-zle -N fzf-complete-ssh
-bindkey '^I' fzf-complete-ssh
+zle -N fzf_complete_ssh
+bindkey '^I' fzf_complete_ssh
 
 # vim: set ft=zsh sw=2 ts=2 et
