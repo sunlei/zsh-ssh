@@ -86,10 +86,15 @@ _ssh_host_list() {
     {
       match_directive = ""
 
+      # Use spaces to ensure the column command maintains the correct number of columns.
+      #   - user
+      #   - desc_formated
+
+      user = " "
       host_name = ""
       alias = ""
       desc = ""
-      desc_formated = ""
+      desc_formated = " "
 
       for (line_num = 1; line_num <= NF; ++line_num) {
         line = parse_line($line_num)
@@ -102,6 +107,7 @@ _ssh_host_list() {
         if (key == "match") { match_directive = value }
 
         if (key == "host") { aliases = value }
+        if (key == "user") { user = value }
         if (key == "hostname") { host_name = value }
         if (key == "#_desc") { desc = value }
       }
@@ -119,7 +125,7 @@ _ssh_host_list() {
         }
 
         if ((host_name && !starts_or_ends_with_star(host_name)) && (alias && !starts_or_ends_with_star(alias)) && !match_directive) {
-          host = sprintf("%s|->|%s|%s\n", alias, host_name, desc_formated)
+          host = sprintf("%s|->|%s|%s|%s\n", alias, host_name, user, desc_formated)
           host_list = host_list host
         }
       }
@@ -153,8 +159,8 @@ _fzf_list_generator() {
   fi
 
   header="
-Alias|->|Hostname|Desc
-─────|──|────────|────
+Alias|->|Hostname|User|Desc
+─────|──|────────|────|────
 "
 
   host_list="${header}\n${host_list}"
