@@ -84,6 +84,8 @@ _ssh_host_list() {
       host_list = ""
     }
     {
+      match_directive = ""
+
       host_name = ""
       alias = ""
       desc = ""
@@ -96,6 +98,8 @@ _ssh_host_list() {
 
         key = tolower(tmp[1])
         value = tmp[2]
+
+        if (key == "match") { match_directive = value }
 
         if (key == "host") { aliases = value }
         if (key == "hostname") { host_name = value }
@@ -114,7 +118,7 @@ _ssh_host_list() {
           desc_formated = sprintf("[\033[00;34m%s\033[0m]", desc)
         }
 
-        if ((host_name && !starts_or_ends_with_star(host_name)) && (alias && !starts_or_ends_with_star(alias))) {
+        if ((host_name && !starts_or_ends_with_star(host_name)) && (alias && !starts_or_ends_with_star(alias)) && !match_directive) {
           host = sprintf("%s|->|%s|%s\n", alias, host_name, desc_formated)
           host_list = host_list host
         }
