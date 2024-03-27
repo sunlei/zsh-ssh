@@ -2,7 +2,7 @@
 
 # Better completion for ssh in Zsh.
 # https://github.com/sunlei/zsh-ssh
-# v0.0.6
+# v0.0.7
 # Copyright (c) 2020 Sunlei <guizaicn@gmail.com>
 
 setopt no_beep # don't beep
