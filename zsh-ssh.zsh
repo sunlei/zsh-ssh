@@ -5,6 +5,8 @@
 # v0.0.6
 # Copyright (c) 2020 Sunlei <guizaicn@gmail.com>
 
+setopt no_beep # don't beep
+
 SSH_CONFIG_FILE="${SSH_CONFIG_FILE:-$HOME/.ssh/config}"
 
 # Parse the file and handle the include directive.
