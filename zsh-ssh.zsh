@@ -94,11 +94,11 @@ _ssh_host_list() {
 
         split(line, tmp, "#-#")
 
-        key = tmp[1]
+        key = tolower(tmp[1])
         value = tmp[2]
 
-        if (key == "Host") { aliases = value }
-        if (key == "Hostname") { host_name = value }
+        if (key == "host") { aliases = value }
+        if (key == "hostname") { host_name = value }
         if (key == "#_Desc") { desc = value }
       }
 
