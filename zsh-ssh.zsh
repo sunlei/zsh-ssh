@@ -158,7 +158,7 @@ Alias|->|Hostname|Desc
   echo $host_list | command column -t -s '|'
 }
 
-_set-lbuffer() {
+_set_lbuffer() {
   local result selected_host connect_cmd is_fzf_result
   result="$1"
   is_fzf_result="$2"
@@ -191,7 +191,7 @@ fzf_complete_ssh() {
     fi
 
     if [ $(echo $result | wc -l) -eq 1 ]; then
-      _set-lbuffer $result false
+      _set_lbuffer $result false
       zle reset-prompt
       # zle redisplay
       return
@@ -213,7 +213,7 @@ fzf_complete_ssh() {
     )
 
     if [ -n "$result" ]; then
-      _set-lbuffer $result true
+      _set_lbuffer $result true
       zle accept-line
     fi
 
