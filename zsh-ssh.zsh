@@ -99,7 +99,7 @@ _ssh_host_list() {
 
         if (key == "host") { aliases = value }
         if (key == "hostname") { host_name = value }
-        if (key == "#_Desc") { desc = value }
+        if (key == "#_desc") { desc = value }
       }
 
       split(aliases, alias_list, " ")
