@@ -44,6 +44,8 @@ _ssh_host_list() {
 
   ssh_config=$(_parse_config_file $SSH_CONFIG_FILE)
   ssh_config=$(echo $ssh_config | command grep -v -E "^\s*#[^_]")
+  # Make sure each Host line is preceded by an empty line
+  ssh_config=$(echo $ssh_config | command sed 's/[[:space:]]*Host\b/\nHost /g')
 
   host_list=$(echo $ssh_config | command awk '
     function join(array, start, end, sep, result, i) {
@@ -59,10 +61,12 @@ _ssh_host_list() {
     }
 
     function parse_line(line) {
-      n = split(line, line_array, " ")
+      # Manualy remove leading spaces for split with regex
+      line = gensub(/^\s+/, "", "g", line)
+      n = split(line, line_array, " +|=")
 
       key = line_array[1]
-      value = join(line_array, 2, n)
+      value = join(line_array, 2, n, " ")
 
       return key "#-#" value
     }
@@ -218,7 +222,6 @@ fzf_complete_ssh() {
       --header-lines=2 \
       --reverse \
       --prompt='SSH Remote > ' \
-      --no-separator \
       --bind 'shift-tab:up,tab:down,bspace:backward-delete-char/eof' \
       --preview 'ssh -T -G $(cut -f 1 -d " " <<< {}) | grep -i -E "^User |^HostName |^Port |^ControlMaster |^ForwardAgent |^LocalForward |^IdentityFile |^RemoteForward |^ProxyCommand |^ProxyJump " | column -t' \
       --preview-window=right:40%
