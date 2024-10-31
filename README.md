@@ -9,6 +9,7 @@ Better host completion for ssh in Zsh.
         - [Zinit](#zinit)
         - [Antigen](#antigen)
         - [Oh My Zsh](#oh-my-zsh)
+        - [Sheldon](#sheldon)
         - [Manual (Git Clone)](#manual-git-clone)
     - [Usage](#usage)
         - [SSH Config Example](#ssh-config-example)
@@ -42,6 +43,19 @@ antigen bundle sunlei/zsh-ssh
     ```shell
     plugins=(zsh-ssh $plugins)
     ```
+
+3. Start a new terminal session.
+
+### Sheldon
+
+1. Add this config to `~/.config/sheldon/plugins.toml`
+
+    ```toml
+    [plugins.zsh-ssh]
+    github = 'sunlei/zsh-ssh'
+    ```
+
+2. Run `sheldon lock` to install the plugin.
 
 3. Start a new terminal session.
 
