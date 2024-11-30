@@ -44,6 +44,7 @@ _ssh_host_list() {
 
   ssh_config=$(_parse_config_file $SSH_CONFIG_FILE)
   ssh_config=$(echo $ssh_config | command grep -v -E "^\s*#[^_]")
+  ssh_config=$(echo $ssh_config | command sed "s/^[ \t]*host /@@host /gi")
 
   host_list=$(echo $ssh_config | command awk '
     function join(array, start, end, sep, result, i) {
@@ -81,7 +82,7 @@ _ssh_host_list() {
     BEGIN {
       IGNORECASE = 1
       FS="\n"
-      RS=""
+      RS="@@"
 
       host_list = ""
     }
