@@ -197,6 +197,7 @@ fzf_complete_ssh() {
     zle ${fzf_ssh_default_completion:-expand-or-complete}
   elif [[ "$cmd" == "ssh" ]]; then
     result=$(_ssh_host_list ${tokens[2, -1]})
+    fuzzy_input="${LBUFFER#"$tokens[1] "}"
 
     if [ -z "$result" ]; then
       zle ${fzf_ssh_default_completion:-expand-or-complete}
@@ -219,6 +220,7 @@ fzf_complete_ssh() {
       --header-lines=2 \
       --reverse \
       --prompt='SSH Remote > ' \
+      --query=$fuzzy_input \
       --no-separator \
       --bind 'shift-tab:up,tab:down,bspace:backward-delete-char/eof' \
       --preview 'ssh -T -G $(cut -f 1 -d " " <<< {}) | grep -i -E "^User |^HostName |^Port |^ControlMaster |^ForwardAgent |^LocalForward |^IdentityFile |^RemoteForward |^ProxyCommand |^ProxyJump " | column -t' \
