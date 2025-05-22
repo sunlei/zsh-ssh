@@ -11,29 +11,41 @@ SSH_CONFIG_FILE="${SSH_CONFIG_FILE:-$HOME/.ssh/config}"
 
 # Parse the file and handle the include directive.
 _parse_config_file() {
-  # Enable PCRE matching
+  # Enable PCRE matching and handle local options
   setopt localoptions rematchpcre
   unsetopt nomatch
 
+  # Resolve the full path of the input config file
   local config_file_path=$(realpath "$1")
+
+  # Read the file line by line
   while IFS= read -r line || [[ -n "$line" ]]; do
+    # Match lines starting with 'Include'
     if [[ $line =~ ^[Ii]nclude[[:space:]]+(.*) ]] && (( $#match > 0 )); then
-      local include_path="${match[1]}"
-      if [[ $include_path == ~* ]]; then
-        # Replace the first occurrence of "~" in the string with the value of the environment variable HOME.
-        local expanded_include_path=${include_path/#\~/$HOME}
-      else
-        local expanded_include_path="$HOME/.ssh/$include_path"
-      fi
-      # `~` used to force the expansion of wildcards in variables
-      for include_file_path in $~expanded_include_path; do
-        if [[ -f "$include_file_path" ]]; then
-          # Insert a blank line between the included files
-          echo ""
-          _parse_config_file "$include_file_path"
+      # Split the rest of the line into individual paths
+      local include_paths=(${(z)match[1]})
+
+      for raw_path in "${include_paths[@]}"; do
+        # Expand ~ and environment variables in the path
+        eval "local expanded=\${(e)raw_path}"
+
+        # If path is relative, resolve it relative to the current config file
+        if [[ "$expanded" != /* ]]; then
+          expanded="$(dirname "$config_file_path")/$expanded"
         fi
+
+        # Expand wildcards (e.g. *.conf) and loop over each matched file
+        for include_file_path in $~expanded; do
+          if [[ -f "$include_file_path" ]]; then
+            # Separate includes with a blank line (for readability)
+            echo ""
+            # Recursively parse included files
+            _parse_config_file "$include_file_path"
+          fi
+        done
       done
     else
+      # Print normal (non-Include) lines
       echo "$line"
     fi
   done < "$config_file_path"
