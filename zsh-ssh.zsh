@@ -198,7 +198,7 @@ _set_lbuffer() {
 }
 
 fzf_complete_ssh() {
-  local tokens cmd result selected_host
+  local tokens cmd result key selection
   setopt localoptions noshwordsplit noksh_arrays noposixbuiltins
 
   tokens=(${(z)LBUFFER})
@@ -235,12 +235,27 @@ fzf_complete_ssh() {
       --no-separator \
       --bind 'shift-tab:up,tab:down,bspace:backward-delete-char/eof' \
       --preview 'ssh -T -G $(cut -f 1 -d " " <<< {}) | grep -i -E "^User |^HostName |^Port |^ControlMaster |^ForwardAgent |^LocalForward |^IdentityFile |^RemoteForward |^ProxyCommand |^ProxyJump " | column -t' \
-      --preview-window=right:40%
+      --preview-window=right:40% \
+      --expect=alt-enter,enter
     )
 
     if [ -n "$result" ]; then
-      _set_lbuffer $result true
-      zle accept-line
+      key=${result%%$'\n'*}
+      if [[ "$key" == "$result" ]]; then
+        selection="$result"
+        key=""
+      else
+        selection=${result#*$'\n'}
+      fi
+
+      if [ -n "$selection" ]; then
+        _set_lbuffer "$selection" true
+        if [[ "$key" == "alt-enter" ]]; then
+          zle reset-prompt
+        else
+          zle accept-line
+        fi
+      fi
     fi
 
     zle reset-prompt
