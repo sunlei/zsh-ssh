@@ -257,10 +257,16 @@ fzf_complete_ssh() {
   binding=$(bindkey '^I')
   [[ $binding =~ 'undefined-key' ]] || fzf_ssh_default_completion=$binding[(s: :w)2]
   unset binding
+  
+  # Check if fzf-tab is loaded and use it as fallback if available
+  if (( $+functions[fzf-tab-complete] )); then
+    fzf_ssh_default_completion="fzf-tab-complete"
+  fi
 }
 
 
+zle -N fzf-ssh-complete fzf_complete_ssh
 zle -N fzf_complete_ssh
-bindkey '^I' fzf_complete_ssh
+bindkey '^I' fzf-ssh-complete
 
 # vim: set ft=zsh sw=2 ts=2 et
