@@ -214,7 +214,10 @@ fzf_complete_ssh() {
     fuzzy_input="${LBUFFER#"$tokens[1] "}"
 
     if [ -z "$result" ]; then
-      zle ${fzf_ssh_default_completion:-expand-or-complete}
+      # When host parameters exist, don't fall back to default completion to avoid slow hosts enumeration
+      if [[ -z "${tokens[2]}" || "${tokens[-1]}" == -* ]]; then
+        zle ${fzf_ssh_default_completion:-expand-or-complete}
+      fi
       return
     fi
 
