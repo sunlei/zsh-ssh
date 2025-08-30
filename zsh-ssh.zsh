@@ -157,8 +157,10 @@ _ssh_host_list() {
     esac
   done
 
-  host_list=$(command grep -i "$1" <<< "$host_list")
-  host_list=$(echo $host_list | command sort -u)
+  if [[ -n "$1" ]]; then
+    host_list=$(command grep -i "$1" <<< "$host_list")
+  fi
+  host_list=$(printf "%s\n" "$host_list" | command sort -u)
 
   echo $host_list
 }
