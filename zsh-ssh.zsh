@@ -6,6 +6,7 @@
 # Copyright (c) 2020 Sunlei <guizaicn@gmail.com>
 
 setopt no_beep # don't beep
+zstyle ':completion:*:ssh:*' hosts off # disable built-in hosts completion
 
 SSH_CONFIG_FILE="${SSH_CONFIG_FILE:-$HOME/.ssh/config}"
 
