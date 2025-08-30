@@ -258,8 +258,11 @@ fzf_complete_ssh() {
       fi
     fi
 
-    zle reset-prompt
-    # zle redisplay
+    # Only reset prompt if not already done for alt-enter
+    if [[ "$key" != "alt-enter" ]]; then
+      zle reset-prompt
+      # zle redisplay
+    fi
 
   # Fall back to default completion
   else
