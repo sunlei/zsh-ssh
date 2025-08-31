@@ -110,6 +110,8 @@ _ssh_host_list() {
       alias = ""
       desc = ""
       desc_formated = " "
+      tag = ""
+      tag_formated = " "
 
       for (line_num = 1; line_num <= NF; ++line_num) {
         line = parse_line($line_num)
@@ -125,6 +127,7 @@ _ssh_host_list() {
         if (key == "user") { user = value }
         if (key == "hostname") { host_name = value }
         if (key == "#_desc") { desc = value }
+        if (key == "tag") { tag = value }
       }
 
       split(aliases, alias_list, " ")
@@ -138,9 +141,13 @@ _ssh_host_list() {
         if (desc) {
           desc_formated = sprintf("[\033[00;34m%s\033[0m]", desc)
         }
+        
+        if (tag) {
+          tag_formated = sprintf("[\033[00;32m%s\033[0m]", tag)
+        }
 
         if ((host_name && !starts_or_ends_with_star(host_name)) && (alias && !starts_or_ends_with_star(alias)) && !match_directive) {
-          host = sprintf("%s|->|%s|%s|%s\n", alias, host_name, user, desc_formated)
+          host = sprintf("%s|->|%s|%s|%s|%s\n", alias, host_name, user, tag_formated, desc_formated)
           host_list = host_list host
         }
       }
@@ -176,8 +183,8 @@ _fzf_list_generator() {
   fi
 
   header="
-Alias|->|Hostname|User|Desc
-─────|──|────────|────|────
+Alias|->|Hostname|User|Tag|Desc
+─────|──|────────|────|───|────
 "
 
   host_list="${header}\n${host_list}"
@@ -236,11 +243,13 @@ fzf_complete_ssh() {
       --info=inline \
       --header-lines=2 \
       --reverse \
-      --prompt='SSH Remote > ' \
+      --prompt='SSH Remote (tag:work, tag:personal) > ' \
       --query=$fuzzy_input \
       --no-separator \
       --bind 'shift-tab:up,tab:down,bspace:backward-delete-char/eof' \
-      --preview 'ssh -T -G $(cut -f 1 -d " " <<< {}) | grep -i -E "^User |^HostName |^Port |^ControlMaster |^ForwardAgent |^LocalForward |^IdentityFile |^RemoteForward |^ProxyCommand |^ProxyJump " | column -t' \
+      --bind 'ctrl-t:change-prompt(Tag Filter > )+change-query(tag:)' \
+      --bind 'ctrl-r:change-prompt(SSH Remote (tag:work, tag:personal) > )+change-query()' \
+      --preview 'ssh -T -G $(cut -f 1 -d " " <<< {}) | grep -i -E "^User |^HostName |^Port |^ControlMaster |^ForwardAgent |^LocalForward |^IdentityFile |^RemoteForward |^ProxyCommand |^ProxyJump |^Tag " | column -t' \
       --preview-window=right:40% \
       --expect=alt-enter,enter
     )
