@@ -88,7 +88,7 @@ _ssh_host_list() {
         start_char = substr(str, 1, 1)
         end_char = substr(str, length(str), 1)
 
-        return start_char == "*" || end_char == "*"
+        return start_char == "*" || end_char == "*" || start_char == "!"
     }
 
     BEGIN {
