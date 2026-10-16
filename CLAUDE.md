@@ -61,6 +61,7 @@ No automated test framework - verification is done through manual testing.
 
 - `SSH_CONFIG_FILE` - Path to SSH config file (default: `$HOME/.ssh/config`)
 - `fzf_ssh_default_completion` - Backup of original Tab completion command
+- `ZSH_SSH_SORT_RECENT=1` - Record ssh destinations via `preexec`/`precmd` hooks and sort hosts most-recently-used first (`ZSH_SSH_RECENT_FILE`, `ZSH_SSH_RECENT_MAX`)
 
 ## Key Functions
 

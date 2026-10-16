@@ -103,6 +103,19 @@ By default, only `ssh` triggers the host list. To also use it for other commands
 ZSH_SSH_COMMANDS=(ssh sftp)
 ```
 
+To list recently used hosts first, enable recent-host sorting:
+
+```shell
+export ZSH_SSH_SORT_RECENT=1
+```
+
+When enabled, every `ssh <host>` command run from the shell (typed or picked from the list) is recorded, unless ssh exits with status 255 (connection failure). Hosts are then ordered by most recent use, with the rest alphabetically. The log location and size can be changed:
+
+```shell
+export ZSH_SSH_RECENT_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/zsh-ssh/recent"  # default
+export ZSH_SSH_RECENT_MAX=200  # unique hosts kept when the log is compacted (default)
+```
+
 ### SSH Config Example
 
 You can use `#_Desc` to set description.
