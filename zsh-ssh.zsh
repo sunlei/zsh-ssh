@@ -342,7 +342,7 @@ Alias|->|Hostname|User|Desc
 }
 
 _set_lbuffer() {
-  local result selected_host connect_cmd is_fzf_result
+  local result selected_host is_fzf_result host_input
   result="$1"
   is_fzf_result="$2"
 
@@ -351,13 +351,17 @@ _set_lbuffer() {
   fi
 
   selected_host=$(cut -f 1 -d " " <<< ${result})
-  connect_cmd="ssh ${selected_host}"
+  host_input=${(Q)3}
+  if [[ "$host_input" == *@* ]]; then
+    selected_host="${host_input%@*}@${selected_host}"
+  fi
 
-  LBUFFER="$connect_cmd"
+  LBUFFER="${LBUFFER%"$3"}${(q)selected_host}"
 }
 
 fzf_complete_ssh() {
-  local tokens cmd result key selection fuzzy_input
+  local tokens cmd result key selection fuzzy_input host_word opt OPTARG
+  local -i OPTIND=2
   setopt localoptions noshwordsplit noksh_arrays noposixbuiltins
 
   tokens=(${(z)LBUFFER})
@@ -366,22 +370,43 @@ fzf_complete_ssh() {
   if [[ "$LBUFFER" =~ "^ *ssh$" ]]; then
     zle ${fzf_ssh_default_completion:-expand-or-complete}
   elif [[ "$cmd" == "ssh" ]]; then
-    result=$(_ssh_host_list ${tokens[2, -1]})
-    fuzzy_input="${LBUFFER#"$tokens[1] "}"
+    while getopts ':1246AaCfGgKkMNnqsTtVvXxYyZB:b:c:D:E:e:F:I:i:J:L:l:m:O:o:P:p:Q:R:S:W:w:' opt "${(@Q)tokens}"; do
+      case "$opt" in
+        '?'|':'|+*|Q|V)
+          zle ${fzf_ssh_default_completion:-expand-or-complete}
+          return
+          ;;
+      esac
+    done
+
+    # Only replace the destination word; other contexts belong to normal completion.
+    if (( OPTIND < $#tokens )) ||
+       { (( OPTIND == $#tokens )) && [[ "$LBUFFER" == *[[:space:]] ]]; } ||
+       { (( OPTIND > $#tokens )) && [[ "$LBUFFER" != *[[:space:]] ]]; } ||
+       [[ ${tokens[OPTIND]} == - ]] ||
+       [[ -n "$RBUFFER" && "$RBUFFER" != [[:space:]]* ]]; then
+      zle ${fzf_ssh_default_completion:-expand-or-complete}
+      return
+    fi
+
+    host_word=${tokens[OPTIND]}
+    fuzzy_input=${(Q)host_word}
+    fuzzy_input=${fuzzy_input##*@}
+    result=$(_ssh_host_list "$fuzzy_input")
     if [[ "$fuzzy_input" == tag:* ]]; then
       fuzzy_input="${fuzzy_input#tag:}"
     fi
 
     if [ -z "$result" ]; then
       # When host parameters exist, don't fall back to default completion to avoid slow hosts enumeration
-      if [[ -z "${tokens[2]}" || "${tokens[-1]}" == -* ]]; then
+      if [[ -z "$host_word" ]]; then
         zle ${fzf_ssh_default_completion:-expand-or-complete}
       fi
       return
     fi
 
     if [ $(echo $result | wc -l) -eq 1 ]; then
-      _set_lbuffer $result false
+      _set_lbuffer "$result" false "$host_word"
       zle reset-prompt
       # zle redisplay
       return
@@ -413,7 +438,7 @@ fzf_complete_ssh() {
       fi
 
       if [ -n "$selection" ]; then
-        _set_lbuffer "$selection" true
+        _set_lbuffer "$selection" true "$host_word"
         if [[ "$key" == "alt-enter" ]]; then
           zle reset-prompt
         else
