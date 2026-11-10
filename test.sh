@@ -26,6 +26,11 @@ check_dependencies() {
     exit 1
   fi
 
+  if ! command -v fzf >/dev/null 2>&1; then
+    echo "${RED}Error: fzf is required but not installed${NC}" >&2
+    exit 1
+  fi
+
   if ! command -v column >/dev/null 2>&1; then
     echo "${RED}Error: column is required but not installed${NC}" >&2
     exit 1

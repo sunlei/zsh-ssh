@@ -54,7 +54,7 @@ Optional recent-host recording uses `zsh/system`, `mkdir`, `mktemp`, `mv`, and `
 
 - Syntax check: `zsh -n zsh-ssh.zsh`
 - Run all tests: `./test.sh`
-- Run one suite: `./test.sh <suite>`, where `<suite>` is the `tests/test_<suite>.zsh` suffix (`config_parser`, `host_list`, `fzf_integration`, `integration`, `completion`, `recent`, `zle`).
+- Run one suite: `./test.sh <suite>`, where `<suite>` is the `tests/test_<suite>.zsh` suffix (`config_parser`, `host_list`, `fzf_integration`, `integration`, `completion`, `recent`, `zle`, `fzf_terminal`).
 - Inspect host list output against a fixture: `SSH_CONFIG_FILE=./tests/ssh_config zsh -f -c 'source ./zsh-ssh.zsh; _ssh_host_list'`
 
 ## Coding Style
@@ -74,7 +74,7 @@ Optional recent-host recording uses `zsh/system`, `mkdir`, `mktemp`, `mv`, and `
 - Add or update tests when changing core logic; `./test.sh` must pass before committing.
 - Before concluding that an issue is already fixed, confirm that a test exercises the issue's exact scenario; if none does, reproduce it first. A green suite does not prove coverage.
 - Add regression tests with the relevant shell option disabled when code depends on a shell option.
-- Completion tests combine real fixture parsing with mocked fzf/ZLE boundaries. The `zle` suite uses a real pseudo-terminal with mocked SSH/fzf, and the `recent` suite checks concurrent writers and safe state replacement. Tests must not connect to real hosts or read user SSH configuration.
+- Completion tests combine real fixture parsing with mocked fzf/ZLE boundaries. The `zle` suite uses a real pseudo-terminal with mocked SSH/fzf. The `fzf_terminal` suite uses real ZLE/fzf and a temporary SSH executable for preview and submission; it covers Enter, Alt-Enter, Tab, Shift-Tab, and Escape. The `recent` suite checks controlled overlapping transactions, complete reader snapshots, and 30 concurrent writers. Tests must not connect to real hosts or read user SSH configuration.
 - Read `docs/lessons.md` before working on a related area, and record new lasting lessons there.
 
 ## Commits & Pull Requests
