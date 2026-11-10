@@ -8,7 +8,7 @@ zsh-ssh is a Zsh plugin that replaces `ssh` host completion with an fzf picker. 
 
 Design principles:
 
-- Activate only on <kbd>Tab</kbd> after `ssh`; fall back to the original <kbd>Tab</kbd> binding in all other cases.
+- Activate only on <kbd>Tab</kbd> after a configured command (default `ssh`); fall back to the original <kbd>Tab</kbd> binding outside a supported destination context.
 - Filter hosts that cannot be connected to directly (wildcards, `!` negations, `Match` blocks).
 - Do not require network access or optional tools at runtime; degrade gracefully when an optional tool is missing.
 
@@ -30,6 +30,10 @@ Key functions in `zsh-ssh.zsh` (search by name; do not rely on line numbers):
 - `_ssh_host_list`: AWK-based extraction of alias, hostname, user, `Tag`, and `#_Desc` description per host; merges known hosts when enabled; handles `tag:<name>` filtering.
 - `_zsh_ssh_columnize`: Aligns columns with `column` when available, otherwise prints plain output.
 - `_fzf_list_generator`: Formats the host list (header row, optional `Tag` column) for fzf.
+- `_zsh_ssh_destination_index`: Locates the destination using raw Shell boundaries and command-specific `getopts` rules shared by completion and recording.
+- `_zsh_ssh_destination_parts`: Validates a literal host suffix and preserves supported literal or variable username prefixes without evaluating Shell text.
+- `_zsh_ssh_sort_recent`: Reorders candidates from a recent-host snapshot with one AWK pass; leaves unseen candidates in their original order.
+- `_zsh_ssh_record_recent`: A `preexec` hook using alias-expanded argument 3; records submitted destinations in a locked, atomically replaced list of 200 unique hosts.
 - `fzf_complete_ssh`: ZLE widget bound to <kbd>Tab</kbd>; prefills the fzf query from the partial input and falls back to `fzf_ssh_default_completion`.
 
 Configuration variables:
@@ -37,15 +41,20 @@ Configuration variables:
 - `SSH_CONFIG_FILE`: SSH config path (default `$HOME/.ssh/config`).
 - `ZSH_SSH_INCLUDE_KNOWN_HOSTS`: Set to `1` to include hosts from `known_hosts` (default off).
 - `ZSH_SSH_KNOWN_HOSTS_FILE`: `known_hosts` path (default `$HOME/.ssh/known_hosts`).
+- `ZSH_SSH_COMMANDS`: Zsh array of supported commands (default `(ssh)`); SFTP has separate option rules and wrappers use SSH rules.
+- `ZSH_SSH_SORT_RECENT`: Set to `1` to record submitted destinations and prefer recent hosts (default off).
+- `ZSH_SSH_RECENT_FILE`: State path, set before loading the plugin (default `${XDG_STATE_HOME:-$HOME/.local/state}/zsh-ssh/recent`). Capacity is an internal constant of 200 hosts.
 - `fzf_ssh_default_completion`: Internal backup of the original <kbd>Tab</kbd> widget.
 
 Dependencies: `zsh`, `fzf`, `awk`, `grep`, `cut`, and `realpath` are required. `column` is optional for the plugin but required by `test.sh`.
+
+Optional recent-host recording uses `zsh/system`, `mkdir`, `mktemp`, `mv`, and `rm`. Its failure must preserve the previous state and normal host completion. Scope file permissions and lock descriptors to the update subshell.
 
 ## Commands
 
 - Syntax check: `zsh -n zsh-ssh.zsh`
 - Run all tests: `./test.sh`
-- Run one suite: `./test.sh <suite>`, where `<suite>` is the `tests/test_<suite>.zsh` suffix (`config_parser`, `host_list`, `fzf_integration`, `integration`).
+- Run one suite: `./test.sh <suite>`, where `<suite>` is the `tests/test_<suite>.zsh` suffix (`config_parser`, `host_list`, `fzf_integration`, `integration`, `completion`, `recent`, `zle`).
 - Inspect host list output against a fixture: `SSH_CONFIG_FILE=./tests/ssh_config zsh -f -c 'source ./zsh-ssh.zsh; _ssh_host_list'`
 
 ## Coding Style
@@ -65,6 +74,7 @@ Dependencies: `zsh`, `fzf`, `awk`, `grep`, `cut`, and `realpath` are required. `
 - Add or update tests when changing core logic; `./test.sh` must pass before committing.
 - Before concluding that an issue is already fixed, confirm that a test exercises the issue's exact scenario; if none does, reproduce it first. A green suite does not prove coverage.
 - Add regression tests with the relevant shell option disabled when code depends on a shell option.
+- Completion tests combine real fixture parsing with mocked fzf/ZLE boundaries. The `zle` suite uses a real pseudo-terminal with mocked SSH/fzf, and the `recent` suite checks concurrent writers and safe state replacement. Tests must not connect to real hosts or read user SSH configuration.
 - Read `docs/lessons.md` before working on a related area, and record new lasting lessons there.
 
 ## Commits & Pull Requests

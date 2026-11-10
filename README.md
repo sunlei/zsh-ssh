@@ -97,11 +97,13 @@ export ZSH_SSH_KNOWN_HOSTS_FILE="$HOME/.ssh/known_hosts"
 
 Hashed `known_hosts` entries cannot be converted back to hostnames and are skipped.
 
-By default, only `ssh` triggers the host list. To also use it for other commands that take an SSH host, such as `sftp` or your own `ssh` wrapper, list them in `ZSH_SSH_COMMANDS` (a zsh array, so set it without `export`):
+By default, only `ssh` triggers the host list. To also use it for `sftp` or an SSH-compatible wrapper, set `ZSH_SSH_COMMANDS` before loading the plugin (a Zsh array, without `export`):
 
 ```shell
 ZSH_SSH_COMMANDS=(ssh sftp)
 ```
+
+SFTP uses its own option rules; wrappers use SSH option rules. Completion preserves options, spacing, and text after the cursor. Username prefixes such as `user@`, `$USER@`, `${USER}@`, and `team-${USER}@` remain unchanged. Option values, remote-command positions, Shell operators, complex expansions, quoted username prefixes, URI destinations, and SFTP remote paths use normal completion when the destination cannot be safely completed.
 
 To list recently used hosts first, enable recent-host sorting:
 
@@ -109,12 +111,15 @@ To list recently used hosts first, enable recent-host sorting:
 export ZSH_SSH_SORT_RECENT=1
 ```
 
-When enabled, every `ssh <host>` command run from the shell (typed or picked from the list) is recorded, unless ssh exits with status 255 (connection failure). Hosts are then ordered by most recent use, with the rest alphabetically. The log location and size can be changed:
+When enabled, the plugin records submitted destinations for configured commands, including aliases and an optional `command` prefix. It records connection attempts before execution, without inspecting exit status or requiring shell history. For `ssh target || true`, only the first destination is recorded. Dynamic hostnames and unsupported command forms are skipped. Enter submits the selected command; Alt-Enter only edits it and does not record a host until execution.
+
+The latest 200 unique hosts appear first, followed by the remaining hosts alphabetically. Fzf keeps match relevance first and uses recency to break ties. The state path can be changed before loading the plugin:
 
 ```shell
 export ZSH_SSH_RECENT_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/zsh-ssh/recent"  # default
-export ZSH_SSH_RECENT_MAX=200  # unique hosts kept when the log is compacted (default)
 ```
+
+Recent-host recording uses Zsh's `zsh/system` module and the standard `mkdir`, `mktemp`, `mv`, and `rm` commands. Updates use a separate lock file and atomic replacement; new state files are private to your user. Normal completion remains available if recent-host recording or sorting fails.
 
 ### SSH Config Example
 
