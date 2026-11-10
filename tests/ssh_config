@@ -1,0 +1,125 @@
+# vim: set ft=ssh_config ts=4 sw=4 et:
+
+Host *
+    ServerAliveInterval 120
+    ServerAliveCountMax 30
+    TCPKeepAlive yes
+    UseRoaming no
+    GSSAPIAuthentication no
+
+include $REPO_ROOT/tests/config.d/include_2
+include $REPO_ROOT/tests/config.d/*
+include $REPO_ROOT/tests/config.d/prod/*
+
+# --------------------------------------------------
+
+Host alias-1                  alias-2  alias-3
+    Hostname 127.0.0.1
+    #_Desc multiple alias test
+
+Host Bastion-Host
+    Hostname 3.3.3.3
+    ForwardAgent yes
+    #_Desc Bastion Host
+
+Host Development-Host
+    Hostname 9.9.9.9
+    ForwardAgent yes
+
+Host Host-1
+    Hostname 1.1.1.1
+    ForwardAgent yes
+
+Host Host-2
+    Hostname 2.2.2.2
+    ForwardAgent yes
+
+Host Production-Host-1
+    Hostname 127.0.0.1
+    ForwardAgent yes
+
+Host Production-Host-2
+    Hostname 8.8.8.8
+    ForwardAgent yes
+
+Host Staging-Host
+    Hostname 6.6.6.6
+    ForwardAgent yes
+
+Host Testing-Host
+    Hostname 5.5.5.5
+    ForwardAgent yes
+
+Host UAT-Host
+    Hostname 127.0.0.1
+    ForwardAgent yes
+
+# --- 测试场景：! 取反主机模式 ---
+Host * !negated-host
+    ServerAliveInterval 60
+
+# --- 测试场景：Match 指令（不应产生主机条目） ---
+Match host *.example.com
+    ForwardAgent no
+
+# --- 测试场景：Key=Value 等号语法 ---
+Host=Equals-Host
+    Hostname=10.10.10.10
+    User=testuser
+
+# --- 测试场景：无空行分隔的紧邻 Host 块 ---
+Host NoBlank-Host-1
+    Hostname 11.11.11.11
+Host NoBlank-Host-2
+    Hostname 12.12.12.12
+
+# --- 测试场景：跨块重复 alias + 显式 HostName 优先（issue #34）---
+Host issue34-host
+    Hostname 34.34.34.34
+
+Host issue34-host 34.34.34.34 35.35.35.35
+    ForwardAgent yes
+
+# --- 测试场景：跨块字段合并（User 和 HostName 在不同块）---
+Host cross-block-host
+    User crossuser
+
+Host cross-block-host
+    Hostname 36.36.36.36
+
+# --- 测试场景：多次显式 HostName 冲突，first-match wins ---
+Host hn-conflict-host
+    Hostname 80.80.80.80
+
+Host hn-conflict-host
+    Hostname 99.99.99.99
+
+# --- 测试场景：无 Host 行的 record 不应污染结果 ---
+    User orphaned-user
+    Hostname 88.88.88.88
+
+# --- 测试场景：单块多 alias 无 HostName ---
+Host Multi-Alias-Host 40.40.40.40 50.50.50.50
+    ForwardAgent yes
+
+# --- 测试场景：单块多 alias 有 HostName ---
+Host Named-Multi-Alias 60.60.60.60
+    Hostname 70.70.70.70
+
+# --- 测试场景：OpenSSH Tag 展示与过滤 ---
+Host Tagged-Work-Host
+    Hostname 37.37.37.37
+    User deploy
+    Tag work
+    #_Desc Work Tagged Host
+
+Host Tagged-Personal-Host
+    Hostname 38.38.38.38
+    User home
+    Tag personal
+
+# --- 测试场景：单块多 Tag 时保持 first-match wins ---
+Host Tagged-First-Wins
+    Hostname 39.39.39.39
+    Tag first
+    Tag second
