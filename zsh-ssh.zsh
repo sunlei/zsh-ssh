@@ -9,6 +9,9 @@ setopt no_beep # don't beep
 zstyle ':completion:*:ssh:*' hosts off # disable built-in hosts completion
 
 SSH_CONFIG_FILE="${SSH_CONFIG_FILE:-$HOME/.ssh/config}"
+
+ZSH_SSH_RECENT_FILE="${ZSH_SSH_RECENT_FILE:-${XDG_STATE_HOME:-$HOME/.local/state}/zsh-ssh/recent}"
+typeset -gi _zsh_ssh_recent_max=200
 typeset -gA _zsh_ssh_optstrings=(
   ssh  "1246AaCfGgKkMNnqsTtVvXxYyZB:b:c:D:E:e:F:I:i:J:L:l:m:O:o:P:p:Q:R:S:W:w:"
   sftp "46AaCfNpqrvB:b:c:D:F:i:J:l:o:P:R:S:s:X:"
@@ -137,113 +140,55 @@ _ssh_known_hosts_list() {
   ' "$known_hosts_file"
 }
 
-_zsh_ssh_recent_file() {
-  print -r -- "${ZSH_SSH_RECENT_FILE:-${XDG_STATE_HOME:-$HOME/.local/state}/zsh-ssh/recent}"
-}
-
-# Print the destination host of an ssh argument list (without user@ / ssh:// / :port).
-_zsh_ssh_extract_dest() {
-  local -a args
-  local tok c
-  local arg_opts='BbcDEeFIiJLlmOoPpQRSWw'
-  local -i i j
-  args=("$@")
-
-  for (( i = 1; i <= $#args; i++ )); do
-    tok="${args[i]}"
-    if [[ "$tok" == -- ]]; then
-      tok="${args[i+1]}"
-      break
-    elif [[ "$tok" == -?* ]]; then
-      # Option cluster: an argument-taking option consumes the rest of the
-      # cluster, or the next word when it is the last character.
-      for (( j = 2; j <= $#tok; j++ )); do
-        c="${tok[j]}"
-        if [[ "$arg_opts" == *"$c"* ]]; then
-          (( j == $#tok )) && (( i++ ))
-          break
-        fi
-      done
-      tok=""
-    else
-      break
-    fi
-  done
-
-  tok="${(Q)tok}"
-  if [[ "$tok" == ssh://* ]]; then
-    tok="${tok#ssh://}"
-    tok="${tok%%/*}"
-    tok="${tok##*@}"
-    tok="${tok%:<->}"
-  else
-    tok="${tok##*@}"
-  fi
-
-  [[ -n "$tok" && "$tok" != *[[:space:]\$\`]* ]] && print -r -- "$tok"
-}
-
-_zsh_ssh_preexec() {
-  local -a tokens
-
-  _zsh_ssh_pending_host=""
-  [[ "$ZSH_SSH_SORT_RECENT" == "1" ]] || return 0
-
-  tokens=(${(z)1})
-  [[ "${tokens[1]}" == command ]] && shift tokens
-  [[ "${tokens[1]}" == ssh ]] || return 0
-
-  _zsh_ssh_pending_host="$(_zsh_ssh_extract_dest "${(@)tokens[2,-1]}")"
-}
-
-_zsh_ssh_precmd() {
-  local -i ret=$?
-  local host="$_zsh_ssh_pending_host"
-
-  _zsh_ssh_pending_host=""
-  # 255 is ssh's own failure code (unreachable host, auth failure, ...).
-  [[ -n "$host" ]] && (( ret != 255 )) && _zsh_ssh_record_recent "$host"
-  return 0
-}
-
-_zsh_ssh_record_recent() {
-  local host="$1" file tmp
-  local -i max="${ZSH_SSH_RECENT_MAX:-200}"
-  local -a lines
-
-  file="$(_zsh_ssh_recent_file)"
-  command mkdir -p "${file:h}" 2>/dev/null || return 0
-  print -r -- "${EPOCHSECONDS:-$(command date +%s)} $host" >> "$file" 2>/dev/null || return 0
-
-  # Compact to the newest entry per host once the log doubles its limit.
-  lines=("${(@f)$(<"$file")}")
-  if (( max > 0 && $#lines > 2 * max )); then
-    tmp="$file.$$"
-    command awk '{ if ($1 + 0 >= last[$2] + 0) last[$2] = $1 } END { for (h in last) print last[h], h }' "$file" \
-      | command sort -k1,1nr | command head -n "$max" > "$tmp" \
-      && command mv -f "$tmp" "$file"
-    command rm -f "$tmp" 2>/dev/null
-  fi
-}
-
-# Order host list lines most-recently-used first, the rest alphabetically.
+# Readers see an entire snapshot; unseen candidates retain their original order.
 _zsh_ssh_sort_recent() {
-  local recent_file
-  recent_file="$(_zsh_ssh_recent_file)"
-
-  if [[ ! -s "$recent_file" ]]; then
-    cat
-    return
-  fi
-
+  emulate -L zsh
+  [[ -s "$ZSH_SSH_RECENT_FILE" ]] || { command cat; return; }
   command awk -F '|' '
-    NR == FNR {
-      split($0, f, " ")
-      if (f[2] != "" && f[1] + 0 > last[f[2]] + 0) last[f[2]] = f[1]
-      next
+    NR == FNR { rank[$0] = NR; recent_count = NR; next }
+    $1 in rank { recent[rank[$1]] = recent[rank[$1]] $0 ORS; next }
+    { rest = rest $0 ORS }
+    END {
+      for (i = 1; i <= recent_count; i++) printf "%s", recent[i]
+      printf "%s", rest
     }
-    { printf "%d\t%s\n", (($1 in last) ? last[$1] : 0), $0 }
-  ' "$recent_file" - | command sort -t $'\t' -k1,1nr -k2,2 | command cut -f 2-
+  ' "$ZSH_SSH_RECENT_FILE" -
+}
+
+# Scope permissions and release the advisory lock when the update subshell exits.
+_zsh_ssh_record_recent() {
+  emulate -L zsh
+  local -a tokens reply hosts
+  local host REPLY
+  [[ "$ZSH_SSH_SORT_RECENT" == 1 ]] || return 0
+  tokens=(${(z)3})
+  [[ ${tokens[1]} == command ]] && shift tokens
+  _zsh_ssh_destination_index "${tokens[@]}" || return 0
+  (( REPLY <= $#tokens )) || return 0
+  _zsh_ssh_destination_parts "${tokens[REPLY]}" "${tokens[1]}" || return 0
+  host=$reply[2]
+  [[ -n "$host" ]] || return 0
+
+  (
+    local tmp file="$ZSH_SSH_RECENT_FILE"
+    umask 077
+    command mkdir -p "${file:h}" || return 0
+    zmodload zsh/system 2>/dev/null || return 0
+    : >>| "$file.lock" || return 0
+    zsystem flock "$file.lock" || return 0
+    {
+      if [[ -e "$file" ]]; then
+        [[ -f "$file" && -r "$file" ]] || return 0
+        hosts=(${(f)"$(<"$file")"})
+      fi
+      hosts=("$host" "${(@)hosts:#$host}")
+      tmp=$(command mktemp "${file}.XXXXXXXXXX") || return 0
+      print -rl -- "${(@)hosts[1,_zsh_ssh_recent_max]}" >| "$tmp" && command mv -f -- "$tmp" "$file"
+    } always {
+      [[ -z "$tmp" || ! -e "$tmp" ]] || command rm -f -- "$tmp"
+    }
+  )
+  return 0
 }
 
 _ssh_host_list() {
@@ -392,8 +337,12 @@ _ssh_host_list() {
     host_list=$(command grep -i -- "$1" <<< "$host_list")
   fi
   host_list=$(printf "%s\n" "$host_list" | command sort -u)
-  if [[ "$ZSH_SSH_SORT_RECENT" == "1" ]]; then
-    host_list=$(printf "%s\n" "$host_list" | _zsh_ssh_sort_recent)
+
+  if [[ "$ZSH_SSH_SORT_RECENT" == 1 ]]; then
+    local sorted_hosts
+    if sorted_hosts=$(printf "%s\n" "$host_list" | _zsh_ssh_sort_recent); then
+      host_list="$sorted_hosts"
+    fi
   fi
 
   printf "%s\n" "$host_list"
@@ -584,11 +533,7 @@ fzf_complete_ssh() {
 zle -N fzf_complete_ssh
 bindkey '^I' fzf_complete_ssh
 
-# Record ssh destinations for ZSH_SSH_SORT_RECENT (checked at run time).
-typeset -g _zsh_ssh_pending_host=""
-zmodload -F zsh/datetime p:EPOCHSECONDS 2>/dev/null
 autoload -Uz add-zsh-hook
-add-zsh-hook preexec _zsh_ssh_preexec
-add-zsh-hook precmd _zsh_ssh_precmd
+add-zsh-hook preexec _zsh_ssh_record_recent
 
 # vim: set ft=zsh sw=2 ts=2 et
