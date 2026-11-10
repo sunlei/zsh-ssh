@@ -1,6 +1,7 @@
 #!/usr/bin/env zsh
 
 source "${0:A:h}/test_framework.zsh"
+unsetopt bgnice
 fzf_ssh_default_completion=expand-or-complete
 zle() { return 0; }
 bindkey() { return 0; }
@@ -76,6 +77,81 @@ expected=$'zeta|->|z| | | \nalpha|->|a| | | \nunused|->|u| | | '
 assert_equals "$expected" "$(print -r -- "$rows" | _zsh_ssh_sort_recent)" 'Order recent candidates first and preserve the rest'
 result=$( _zsh_ssh_sort_recent() { return 1; }; _ssh_host_list )
 assert_contains target "$result" 'Keep candidates when optional recent sorting fails'
+
+# Pause an actual update midway through its output, before the atomic rename.
+zmodload zsh/zselect
+zmodload zsh/system
+wait_for_marker() {
+  local marker="$1" deadline=$(( SECONDS + 10 ))
+  while [[ ! -e "$marker" ]] && (( SECONDS < deadline )); do
+    zselect -t 1
+  done
+  [[ -e "$marker" ]]
+}
+
+ZSH_SSH_RECENT_FILE="$recent_test_dir/transaction"
+old_snapshot=$'old-1\nold-2'
+first_snapshot=$'first\nold-1\nold-2'
+second_snapshot=$'second\nfirst\nold-1\nold-2'
+print -r -- "$old_snapshot" > "$ZSH_SSH_RECENT_FILE"
+mkfifo "$recent_test_dir/release"
+exec {release_fd}<> "$recent_test_dir/release"
+(
+  print() {
+    # Only the state write is split; the production lock/rename path is intact.
+    if [[ "$1" == -rl && "$2" == -- ]]; then
+      builtin print -r -- "$3"
+      : > "$recent_test_dir/partial-ready"
+      local release
+      read -r -t 10 -u "$release_fd" release || return 1
+      builtin print -rl -- "${@:4}"
+    else
+      builtin print "$@"
+    fi
+  }
+  _zsh_ssh_record_recent '' '' 'ssh first'
+) &
+first_writer=$!
+wait_for_marker "$recent_test_dir/partial-ready"
+assert_equals 0 "$?" 'Reach the partial temporary write barrier'
+assert_equals "$old_snapshot" "$(<"$ZSH_SSH_RECENT_FILE")" 'Keep the published snapshot complete during a partial write'
+
+(
+  local -i snapshots=0
+  local snapshot
+  while [[ ! -e "$recent_test_dir/stop-reader" ]]; do
+    snapshot=$(<"$ZSH_SSH_RECENT_FILE")
+    if [[ "$snapshot" != "$old_snapshot" && "$snapshot" != "$first_snapshot" &&
+          "$snapshot" != "$second_snapshot" ]]; then
+      print -r -- invalid > "$recent_test_dir/reader-result"
+      exit 1
+    fi
+    (( snapshots++ ))
+    : > "$recent_test_dir/reader-ready"
+    zselect -t 1
+  done
+  print -r -- "$snapshots" > "$recent_test_dir/reader-result"
+) &
+reader=$!
+wait_for_marker "$recent_test_dir/reader-ready"
+assert_equals 0 "$?" 'Read concurrently while the temporary file is incomplete'
+(
+  : > "$recent_test_dir/second-started"
+  _zsh_ssh_record_recent '' '' 'ssh second'
+) &
+second_writer=$!
+wait_for_marker "$recent_test_dir/second-started"
+assert_equals 0 "$?" 'Start the second writer before releasing the first'
+( zsystem flock -t 0 "$ZSH_SSH_RECENT_FILE.lock" ) 2>/dev/null
+assert_equals 1 "$?" 'Hold the stable lock through the entire state write'
+print -r -u "$release_fd" -- release
+wait "$first_writer" "$second_writer"
+: > "$recent_test_dir/stop-reader"
+wait "$reader"
+assert_equals 0 "$?" 'Expose only complete snapshots to concurrent readers'
+assert_equals yes "$([[ "$(<"$recent_test_dir/reader-result")" == <1-> ]] && print yes || print no)" 'Observe at least one snapshot during the overlapping update'
+assert_equals "$second_snapshot" "$(<"$ZSH_SSH_RECENT_FILE")" 'Serialize two overlapping read-modify-write transactions'
+exec {release_fd}>&-
 
 ZSH_SSH_RECENT_FILE="$recent_test_dir/concurrent"
 plugin_file="${0:A:h:h}/zsh-ssh.zsh"
