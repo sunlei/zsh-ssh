@@ -10,6 +10,9 @@ plugin_file="$REPO_ROOT/zsh-ssh.zsh"
 config_file="${0:A:h}/ssh_config_completion"
 export FZF_DEFAULT_OPTS='' FZF_DEFAULT_OPTS_FILE=/dev/null
 export SHELL="$(command -v zsh)" TEST_SSH_LOG="$test_dir/ssh"
+export TEST_STARTUP_LOG="$test_dir/startup-read"
+mkdir "$test_dir/inherited-startup"
+print -r -- 'print -r -- unexpected-startup >> "$TEST_STARTUP_LOG"' > "$test_dir/inherited-startup/.zshenv"
 mkdir "$test_dir/bin"
 # A real executable also intercepts preview subprocesses, unlike a Shell function.
 cat > "$test_dir/bin/ssh" <<'EOF'
@@ -63,7 +66,7 @@ run_terminal_test() {
   # Split the prompt marker to distinguish the prompt from terminal echo.
   zpty -w ssh_fzf "stty rows 40 cols 120; PROMPT='__SSH_''READY__ '; RPROMPT=''; bindkey -e"
   expect_terminal '*__SSH_READY__ *' 'Start a sized interactive terminal' || return
-  send_keys "PATH=${(q)test_dir}/bin:\$PATH; fzf_ssh_default_completion=expand-or-complete; SSH_CONFIG_FILE=${(q)config_file}; ZSH_SSH_SORT_RECENT=1; ZSH_SSH_RECENT_FILE=${(q)test_dir}/recent; source ${(q)plugin_file}; inspect_buffer() { print -r -- \"LIVE_BUFFER:\$BUFFER\"; zle redisplay; }; zle -N inspect_buffer; bindkey '^X' inspect_buffer"$'\n'
+  send_keys "export ZDOTDIR=${(q)test_dir}; PATH=${(q)test_dir}/bin:\$PATH; fzf_ssh_default_completion=expand-or-complete; SSH_CONFIG_FILE=${(q)config_file}; ZSH_SSH_SORT_RECENT=1; ZSH_SSH_RECENT_FILE=${(q)test_dir}/recent; source ${(q)plugin_file}; inspect_buffer() { print -r -- \"LIVE_BUFFER:\$BUFFER\"; zle redisplay; }; zle -N inspect_buffer; bindkey '^X' inspect_buffer"$'\n'
   expect_terminal '*__SSH_READY__ *' 'Load the plugin with isolated SSH executables' || return
 
   send_keys $'ssh \t'
@@ -102,9 +105,10 @@ run_terminal_test() {
   assert_contains 'LIVE_BUFFER:ssh -p 2222 ' "$terminal_output" 'Preserve the original command when fzf is canceled'
   assert_equals target "$(<"$TEST_SSH_LOG.execution")" 'Do not execute a canceled picker selection'
   assert_equals target "$(<"$test_dir/recent")" 'Do not change recency for a canceled picker'
+  assert_equals no "$([[ -e "$TEST_STARTUP_LOG" ]] && print yes || print no)" 'Do not load inherited startup files in preview subprocesses'
 }
 
-TERM=xterm zpty -b ssh_fzf zsh -f
+TERM=xterm ZDOTDIR="$test_dir/inherited-startup" zpty -b ssh_fzf zsh -f
 {
   run_terminal_test
 } always {
