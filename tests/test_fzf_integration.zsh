@@ -70,7 +70,7 @@ test_extract_host_from_fzf_output() {
   local LBUFFER="ssh "
   local fzf_line="alias-1     127.0.0.1     user     [desc]"
 
-  _set_lbuffer "$fzf_line" true ""
+  _set_lbuffer "${fzf_line%% *}" ""
 
   assert_equals "ssh alias-1" "$LBUFFER" "Set LBUFFER from fzf formatted line"
 }
@@ -80,7 +80,7 @@ test_extract_host_from_pipe_output() {
   local LBUFFER="ssh "
   local direct_result="alias-1|->|127.0.0.1| |[desc]"
 
-  _set_lbuffer "$direct_result" false ""
+  _set_lbuffer "${direct_result%%|*}" ""
 
   assert_equals "ssh alias-1" "$LBUFFER" "Set LBUFFER from direct result format"
 }
@@ -88,7 +88,7 @@ test_extract_host_from_pipe_output() {
 test_set_lbuffer_overwrites_existing_command() {
   local LBUFFER="ssh old-host"
 
-  _set_lbuffer "new-host|->|10.0.0.1| | " false "old-host"
+  _set_lbuffer "new-host" "old-host"
 
   assert_equals "ssh new-host" "$LBUFFER" "Replace existing ssh command with selected host"
 }

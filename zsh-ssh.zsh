@@ -9,6 +9,10 @@ setopt no_beep # don't beep
 zstyle ':completion:*:ssh:*' hosts off # disable built-in hosts completion
 
 SSH_CONFIG_FILE="${SSH_CONFIG_FILE:-$HOME/.ssh/config}"
+typeset -gA _zsh_ssh_optstrings=(
+  ssh  "1246AaCfGgKkMNnqsTtVvXxYyZB:b:c:D:E:e:F:I:i:J:L:l:m:O:o:P:p:Q:R:S:W:w:"
+  sftp "46AaCfNpqrvB:b:c:D:F:i:J:l:o:P:R:S:s:X:"
+)
 typeset -gi _zsh_ssh_parse_depth=0
 typeset -gA _zsh_ssh_seen_config_files
 
@@ -372,13 +376,6 @@ _ssh_host_list() {
     host_list="${host_list}"$'\n'"$(_ssh_known_hosts_list)"
   fi
 
-  for arg in "$@"; do
-    case $arg in
-    -*) shift;;
-    *) break;;
-    esac
-  done
-
   if [[ "$1" == tag:* ]]; then
     tag_query="${1#tag:}"
     host_list=$(command awk -F '|' -v q="$tag_query" '
@@ -392,7 +389,7 @@ _ssh_host_list() {
       NF >= 6 && (q == "" || index(tolower(plain_tag($5)), q) > 0)
     ' <<< "$host_list")
   elif [[ -n "$1" ]]; then
-    host_list=$(command grep -i "$1" <<< "$host_list")
+    host_list=$(command grep -i -- "$1" <<< "$host_list")
   fi
   host_list=$(printf "%s\n" "$host_list" | command sort -u)
   if [[ "$ZSH_SSH_SORT_RECENT" == "1" ]]; then
@@ -453,129 +450,127 @@ Alias|->|Hostname|User|Desc
   printf "%s\n" "$host_list" | _zsh_ssh_columnize
 }
 
+# Locate the destination in the first simple command without evaluating Shell text.
+_zsh_ssh_destination_index() {
+  emulate -L zsh
+  local -a tokens=("$@") ssh_commands=(${ZSH_SSH_COMMANDS:-ssh})
+  local opt OPTARG token command_name="${tokens[1]}"
+  local -i OPTIND=2 token_count=$#tokens boundary=$(( $#tokens + 1 )) i
+  local redirection='^([0-9]*|\{[[:alpha:]_][[:alnum:]_]*\})[<>]'
+
+  (( ${ssh_commands[(Ie)$command_name]} )) || return 1
+  for (( i = 2; i <= $#tokens; i++ )); do
+    token=${tokens[i]}
+    if [[ "$token" == (';'|'&'|'&&'|'||'|'|'|'|&'|'('|')') || "$token" =~ "$redirection" ]]; then
+      boundary=$i
+      break
+    fi
+  done
+  tokens=("${(@)tokens[1,boundary-1]}")
+  while getopts ":${_zsh_ssh_optstrings[${tokens[1]}]:-${_zsh_ssh_optstrings[ssh]}}" opt "${(@Q)tokens}"; do
+    [[ "$opt" == ([?:QV]|+*) ]] && return 1
+  done
+  (( boundary > token_count || OPTIND < boundary )) || return 1
+  REPLY=$OPTIND
+}
+
+# Keep only a proven literal host suffix; a dynamic username stays verbatim.
+_zsh_ssh_destination_parts() {
+  emulate -L zsh
+  local word="$1" command_name="$2" prefix host_part query
+  local username='^([[:alnum:]_.+%@-]|\$[[:alpha:]_][[:alnum:]_]*|\$\{[[:alpha:]_][[:alnum:]_]*\})+$'
+
+  host_part="$word"
+  if [[ "$word" == *@* ]]; then
+    prefix=${word%@*}
+    [[ "$prefix" =~ "$username" ]] || return 1
+    host_part=${word##*@}
+  fi
+  [[ "$host_part" != *[\$\`\(\)\{\}]* ]] || return 1
+  query=${(Q)host_part}
+  [[ "$query" != *[\'\"\\/]* ]] || return 1
+  if [[ "$command_name" == sftp && "$query" == *:* && "$query" != tag:* ]]; then
+    return 1
+  fi
+  reply=("$host_part" "$query")
+}
+
 _set_lbuffer() {
-  local result selected_host is_fzf_result host_input
-  result="$1"
-  is_fzf_result="$2"
-
-  if [ "$is_fzf_result" = false ] ; then
-    result=$(cut -f 1 -d "|" <<< ${result})
-  fi
-
-  selected_host=$(cut -f 1 -d " " <<< ${result})
-  host_input=${(Q)3}
-  if [[ "$host_input" == *@* ]]; then
-    selected_host="${host_input%@*}@${selected_host}"
-  fi
-
-  LBUFFER="${LBUFFER%"$3"}${(q)selected_host}"
+  local selected_host="$1" host_part="$2"
+  LBUFFER="${LBUFFER%"$host_part"}${(q)selected_host}"
 }
 
 fzf_complete_ssh() {
-  local tokens cmd result key selection fuzzy_input host_word opt OPTARG
-  local -i OPTIND=2
-  local -a fzf_extra_opts
-  setopt localoptions noshwordsplit noksh_arrays noposixbuiltins
-
-  # Keep recency order among equally good matches.
-  [[ "$ZSH_SSH_SORT_RECENT" == "1" ]] && fzf_extra_opts=(--tiebreak=index)
-
-  local -a ssh_commands=(${ZSH_SSH_COMMANDS:-ssh})
+  emulate -L zsh
+  local -a tokens reply fzf_extra_opts
+  local host_word host_part query result key selection REPLY
 
   tokens=(${(z)LBUFFER})
-  cmd=${tokens[1]}
-
-  if (( $#tokens <= 1 )) && [[ "$LBUFFER" != *' ' ]]; then
+  if ! _zsh_ssh_destination_index "${tokens[@]}" ||
+     (( REPLY < $#tokens )) ||
+     { (( REPLY == $#tokens )) && [[ "$LBUFFER" == *[[:space:]] ]]; } ||
+     { (( REPLY > $#tokens )) && [[ "$LBUFFER" != *[[:space:]] ]]; } ||
+     [[ ${tokens[REPLY]} == - ]] ||
+     [[ -n "$RBUFFER" && "$RBUFFER" != [[:space:]]* ]]; then
     zle ${fzf_ssh_default_completion:-expand-or-complete}
-  elif (( ${ssh_commands[(Ie)$cmd]} )); then
-    while getopts ':1246AaCfGgKkMNnqsTtVvXxYyZB:b:c:D:E:e:F:I:i:J:L:l:m:O:o:P:p:Q:R:S:W:w:' opt "${(@Q)tokens}"; do
-      case "$opt" in
-        '?'|':'|+*|Q|V)
-          zle ${fzf_ssh_default_completion:-expand-or-complete}
-          return
-          ;;
-      esac
-    done
-
-    # Only replace the destination word; other contexts belong to normal completion.
-    if (( OPTIND < $#tokens )) ||
-       { (( OPTIND == $#tokens )) && [[ "$LBUFFER" == *[[:space:]] ]]; } ||
-       { (( OPTIND > $#tokens )) && [[ "$LBUFFER" != *[[:space:]] ]]; } ||
-       [[ ${tokens[OPTIND]} == - ]] ||
-       [[ -n "$RBUFFER" && "$RBUFFER" != [[:space:]]* ]]; then
-      zle ${fzf_ssh_default_completion:-expand-or-complete}
-      return
-    fi
-
-    host_word=${tokens[OPTIND]}
-    fuzzy_input=${(Q)host_word}
-    fuzzy_input=${fuzzy_input##*@}
-    result=$(_ssh_host_list "$fuzzy_input")
-    if [[ "$fuzzy_input" == tag:* ]]; then
-      fuzzy_input="${fuzzy_input#tag:}"
-    fi
-
-    if [ -z "$result" ]; then
-      # When host parameters exist, don't fall back to default completion to avoid slow hosts enumeration
-      if [[ -z "$host_word" ]]; then
-        zle ${fzf_ssh_default_completion:-expand-or-complete}
-      fi
-      return
-    fi
-
-    if [ $(echo $result | wc -l) -eq 1 ]; then
-      _set_lbuffer "$result" false "$host_word"
-      zle reset-prompt
-      # zle redisplay
-      return
-    fi
-
-    result=$(_fzf_list_generator $result | fzf \
-      --height 40% \
-      --ansi \
-      --border \
-      --cycle \
-      --info=inline \
-      --header-lines=2 \
-      --reverse \
-      --prompt='SSH Remote > ' \
-      --query=$fuzzy_input \
-      --bind 'shift-tab:up,tab:down,bspace:backward-delete-char/eof' \
-      --preview 'ssh -T -G $(cut -f 1 -d " " <<< {}) | grep -i -E "^User |^HostName |^Port |^ControlMaster |^ForwardAgent |^LocalForward |^IdentityFile |^RemoteForward |^ProxyCommand |^ProxyJump " | (command -v column >/dev/null 2>&1 && column -t || cat)' \
-      --preview-window=right:40% \
-      --expect=alt-enter,enter \
-      "${fzf_extra_opts[@]}"
-    )
-
-    if [ -n "$result" ]; then
-      key=${result%%$'\n'*}
-      if [[ "$key" == "$result" ]]; then
-        selection="$result"
-        key=""
-      else
-        selection=${result#*$'\n'}
-      fi
-
-      if [ -n "$selection" ]; then
-        _set_lbuffer "$selection" true "$host_word"
-        if [[ "$key" == "alt-enter" ]]; then
-          zle reset-prompt
-        else
-          zle accept-line
-        fi
-      fi
-    fi
-
-    # Only reset prompt if not already done for alt-enter
-    if [[ "$key" != "alt-enter" ]]; then
-      zle reset-prompt
-      # zle redisplay
-    fi
-
-  # Fall back to default completion
-  else
-    zle ${fzf_ssh_default_completion:-expand-or-complete}
+    return
   fi
+
+  host_word=${tokens[REPLY]}
+  if ! _zsh_ssh_destination_parts "$host_word" "${tokens[1]}"; then
+    zle ${fzf_ssh_default_completion:-expand-or-complete}
+    return
+  fi
+  host_part=$reply[1]
+  query=$reply[2]
+  result=$(_ssh_host_list "$query")
+  if [[ -z "$result" ]]; then
+    [[ -n "$host_part" ]] || zle ${fzf_ssh_default_completion:-expand-or-complete}
+    return
+  fi
+
+  if [[ "$result" != *$'\n'* ]]; then
+    _set_lbuffer "${result%%|*}" "$host_part"
+    zle reset-prompt
+    return
+  fi
+
+  [[ "$ZSH_SSH_SORT_RECENT" == 1 ]] && fzf_extra_opts=(--tiebreak=index)
+  result=$(_fzf_list_generator "$result" | fzf \
+    --height 40% \
+    --ansi \
+    --border \
+    --cycle \
+    --info=inline \
+    --header-lines=2 \
+    --reverse \
+    --prompt='SSH Remote > ' \
+    --query="${query#tag:}" \
+    --bind 'shift-tab:up,tab:down,bspace:backward-delete-char/eof' \
+    --preview 'ssh -T -G $(cut -f 1 -d " " <<< {}) | grep -i -E "^User |^HostName |^Port |^ControlMaster |^ForwardAgent |^LocalForward |^IdentityFile |^RemoteForward |^ProxyCommand |^ProxyJump " | (command -v column >/dev/null 2>&1 && column -t || cat)' \
+    --preview-window=right:40% \
+    --expect=alt-enter,enter \
+    "${fzf_extra_opts[@]}"
+  )
+
+  if [[ -n "$result" ]]; then
+    key=${result%%$'\n'*}
+    if [[ "$key" == "$result" ]]; then
+      selection="$result"
+      key=""
+    else
+      selection=${result#*$'\n'}
+    fi
+    if [[ -n "$selection" ]]; then
+      _set_lbuffer "${selection%%[[:space:]]*}" "$host_part"
+      if [[ "$key" == alt-enter ]]; then
+        zle reset-prompt
+      else
+        zle accept-line
+      fi
+    fi
+  fi
+  [[ "$key" == alt-enter ]] || zle reset-prompt
 }
 
 

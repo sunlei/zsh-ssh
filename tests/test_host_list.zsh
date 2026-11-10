@@ -53,11 +53,11 @@ test_search_filtering() {
   assert_line_absent "Development-Host|->|9.9.9.9| | | " "$result" "Exclude non-matching host row"
 }
 
-test_search_after_option_like_args() {
-  local result=$(_ssh_host_list -p "bastion")
+test_search_treats_leading_dash_as_query() {
+  local result=$(_ssh_host_list "-Host")
 
-  assert_contains "Bastion-Host" "$result" "Ignore ssh option-like args before search term"
-  assert_not_contains "Development-Host" "$result" "Apply search term after skipped option-like arg"
+  assert_contains "Bastion-Host" "$result" "Match a query that starts with a dash"
+  assert_not_contains "alias-1" "$result" "Do not discard a leading-dash query"
 }
 
 test_search_case_insensitive() {
@@ -209,7 +209,7 @@ test_extract_multiple_aliases
 test_extract_descriptions
 test_filter_wildcard_hosts
 test_search_filtering
-test_search_after_option_like_args
+test_search_treats_leading_dash_as_query
 test_search_case_insensitive
 test_empty_search_returns_all
 test_no_match_returns_empty

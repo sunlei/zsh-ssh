@@ -1,0 +1,6 @@
+Host target
+  HostName 192.0.2.1
+  Tag work
+  #_Desc primary (tar) and tar}
+Host other
+  HostName 192.0.2.2
