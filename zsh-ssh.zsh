@@ -179,7 +179,7 @@ _zsh_ssh_record_recent() {
     {
       if [[ -e "$file" ]]; then
         [[ -f "$file" && -r "$file" ]] || return 0
-        hosts=(${(f)"$(<"$file")"})
+        hosts=(${(f)"$(<"$file")"}) || return 0
       fi
       hosts=("$host" "${(@)hosts:#$host}")
       tmp=$(command mktemp "${file}.XXXXXXXXXX") || return 0
@@ -405,12 +405,13 @@ _zsh_ssh_destination_index() {
   local -a tokens=("$@") ssh_commands=(${ZSH_SSH_COMMANDS:-ssh})
   local opt OPTARG token command_name="${tokens[1]}"
   local -i OPTIND=2 token_count=$#tokens boundary=$(( $#tokens + 1 )) i
-  local redirection='^([0-9]*|\{[[:alpha:]_][[:alnum:]_]*\})[<>]'
+  local control='^[;&|()]+$'
+  local redirection='^([0-9]*|\{[[:alpha:]_][[:alnum:]_]*\}|&)[<>]'
 
   (( ${ssh_commands[(Ie)$command_name]} )) || return 1
   for (( i = 2; i <= $#tokens; i++ )); do
     token=${tokens[i]}
-    if [[ "$token" == (';'|'&'|'&&'|'||'|'|'|'|&'|'('|')') || "$token" =~ "$redirection" ]]; then
+    if [[ "$token" =~ "$control" || "$token" =~ "$redirection" ]]; then
       boundary=$i
       break
     fi

@@ -42,6 +42,7 @@ check_completion 'ssh -p 2222 tar' 'ssh -p 2222 target' reset-prompt ' uptime'
 check_completion 'ssh -o "ProxyCommand=nc %h %p 2>/dev/null" tar' 'ssh -o "ProxyCommand=nc %h %p 2>/dev/null" target'
 
 for input in 'ssh >' 'ssh |' 'ssh ||' 'ssh ;' 'ssh 2>' 'ssh -p > out' \
+             'ssh &>' 'ssh &>>' 'ssh &!' 'ssh &|' 'ssh ;;' \
              'ssh > out tar' 'ssh {fd}> out tar' 'ssh "$USER@tar"' \
              "ssh 'bob'@tar" 'ssh $(id -un)@tar' 'ssh user@$(echo a@tar)' \
              'ssh user@${H:-a@tar}' 'ssh user@$(echo a@tar' \
