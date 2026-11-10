@@ -364,12 +364,14 @@ fzf_complete_ssh() {
   local -i OPTIND=2
   setopt localoptions noshwordsplit noksh_arrays noposixbuiltins
 
+  local -a ssh_commands=(${ZSH_SSH_COMMANDS:-ssh})
+
   tokens=(${(z)LBUFFER})
   cmd=${tokens[1]}
 
-  if [[ "$LBUFFER" =~ "^ *ssh$" ]]; then
+  if (( $#tokens <= 1 )) && [[ "$LBUFFER" != *' ' ]]; then
     zle ${fzf_ssh_default_completion:-expand-or-complete}
-  elif [[ "$cmd" == "ssh" ]]; then
+  elif (( ${ssh_commands[(Ie)$cmd]} )); then
     while getopts ':1246AaCfGgKkMNnqsTtVvXxYyZB:b:c:D:E:e:F:I:i:J:L:l:m:O:o:P:p:Q:R:S:W:w:' opt "${(@Q)tokens}"; do
       case "$opt" in
         '?'|':'|+*|Q|V)
