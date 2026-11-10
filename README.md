@@ -97,6 +97,12 @@ export ZSH_SSH_KNOWN_HOSTS_FILE="$HOME/.ssh/known_hosts"
 
 Hashed `known_hosts` entries cannot be converted back to hostnames and are skipped.
 
+By default, only `ssh` triggers the host list. To also use it for other commands that take an SSH host, such as `sftp` or your own `ssh` wrapper, list them in `ZSH_SSH_COMMANDS` (a zsh array, so set it without `export`):
+
+```shell
+ZSH_SSH_COMMANDS=(ssh sftp)
+```
+
 ### SSH Config Example
 
 You can use `#_Desc` to set description.
