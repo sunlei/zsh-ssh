@@ -3,6 +3,14 @@
 # Simple test framework for zsh-ssh plugin
 # 遵循 Linus 哲学：简洁、实用、零废话
 
+# zsh -f still inherits exports; pin inputs before any plugin or zpty startup.
+typeset -g _zsh_ssh_test_dir="${${(%):-%x}:A:h}"
+export REPO_ROOT="${_zsh_ssh_test_dir:h}"
+export SSH_CONFIG_FILE="$_zsh_ssh_test_dir/ssh_config"
+export ZSH_SSH_INCLUDE_KNOWN_HOSTS=0 ZSH_SSH_KNOWN_HOSTS_FILE=/dev/null
+export ZSH_SSH_SORT_RECENT=0 ZSH_SSH_RECENT_FILE=/dev/null
+typeset -ga ZSH_SSH_COMMANDS=(ssh)
+
 # Test counters
 TESTS_RUN=0
 TESTS_PASSED=0
@@ -160,20 +168,12 @@ assert_not_contains() {
 
 # Setup function for tests
 setup_test_env() {
-  # Source the main plugin file first
-  local script_dir="$(cd "$(dirname "$0")" && pwd)"
-  source "$script_dir/../zsh-ssh.zsh"
-  
-  # Set test SSH config file
-  export SSH_CONFIG_FILE="$script_dir/ssh_config"
-  # Provide a stable repo root for includes inside fixtures
-  export REPO_ROOT="$(cd "$script_dir/.." && pwd)"
+  source "$REPO_ROOT/zsh-ssh.zsh"
 }
 
 # Test data helpers
 get_test_config_path() {
-  local script_dir="$(cd "$(dirname "$0")" && pwd)"
-  echo "$script_dir/ssh_config"
+  echo "$_zsh_ssh_test_dir/ssh_config"
 }
 
 # Finish and exit with proper status so test.sh can detect failures
