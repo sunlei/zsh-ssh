@@ -65,7 +65,7 @@ run_test_file() {
   local original_dir="$(pwd)"
   cd "$(dirname "$test_file")"
   
-  if zsh "$(basename "$test_file")"; then
+  if zsh -f "$(basename "$test_file")"; then
     cd "$original_dir"
     echo "${GREEN}✓ $(basename "$test_file") passed${NC}"
     return 0
