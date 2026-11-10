@@ -405,7 +405,7 @@ _zsh_ssh_destination_index() {
   local -a tokens=("$@") ssh_commands=(${ZSH_SSH_COMMANDS:-ssh})
   local opt OPTARG token command_name="${tokens[1]}"
   local -i OPTIND=2 token_count=$#tokens boundary=$(( $#tokens + 1 )) i
-  local control='^[;&|()]+$'
+  local control='^[;&|()]+$|^#'
   local redirection='^([0-9]*|\{[[:alpha:]_][[:alnum:]_]*\}|&)[<>]'
 
   (( ${ssh_commands[(Ie)$command_name]} )) || return 1
