@@ -82,26 +82,26 @@ run_terminal_test() {
 
   send_keys $'ssh \t'
   expect_terminal '*SSH Remote >*' 'Reopen fzf for Enter selection' || return
-  send_keys other
-  expect_terminal '*preview-other.invalid*' 'Update the preview after filtering' || return
+  send_keys target
+  expect_terminal '*preview-target.invalid*' 'Update the preview when filtering changes the selected alias' || return
   send_keys $'\r'
-  expect_terminal '*MOCK_SSH:other*__SSH_READY__ *' 'Execute the real fzf Enter selection' || return
-  assert_equals other "$(<"$TEST_SSH_LOG.execution")" 'Execute only the selected destination'
-  assert_equals other "$(<"$test_dir/recent")" 'Record the submitted real fzf selection'
+  expect_terminal '*MOCK_SSH:target*__SSH_READY__ *' 'Execute the real fzf Enter selection' || return
+  assert_equals target "$(<"$TEST_SSH_LOG.execution")" 'Execute only the selected destination'
+  assert_equals target "$(<"$test_dir/recent")" 'Record the submitted real fzf selection'
 
   send_keys $'ssh -p 2222 \t'
-  expect_terminal '*preview-other.invalid*' 'Start the picker with the recent alias first' || return
+  expect_terminal '*preview-target.invalid*' 'Start the picker with the recent alias first' || return
   send_keys $'\t'
-  expect_terminal '*preview-target.invalid*' 'Move down with the actual Tab binding' || return
+  expect_terminal '*preview-other.invalid*' 'Move down with the actual Tab binding' || return
   send_keys $'\e[Z'
-  expect_terminal '*preview-other.invalid*' 'Move up with the actual Shift-Tab binding' || return
+  expect_terminal '*preview-target.invalid*' 'Move up with the actual Shift-Tab binding' || return
   send_keys $'\e'
   expect_terminal '*__SSH_READY__ *' 'Cancel the actual fzf picker with Escape' || return
   send_keys $'\x18'
   expect_terminal '*LIVE_BUFFER:*__SSH_READY__ *' 'Inspect the buffer after fzf cancellation' || return
   assert_contains 'LIVE_BUFFER:ssh -p 2222 ' "$terminal_output" 'Preserve the original command when fzf is canceled'
-  assert_equals other "$(<"$TEST_SSH_LOG.execution")" 'Do not execute a canceled picker selection'
-  assert_equals other "$(<"$test_dir/recent")" 'Do not change recency for a canceled picker'
+  assert_equals target "$(<"$TEST_SSH_LOG.execution")" 'Do not execute a canceled picker selection'
+  assert_equals target "$(<"$test_dir/recent")" 'Do not change recency for a canceled picker'
 }
 
 TERM=xterm zpty -b ssh_fzf zsh -f
